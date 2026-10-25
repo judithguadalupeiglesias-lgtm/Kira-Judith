@@ -509,32 +509,27 @@
       if (val === null || val === undefined) return 'faltan';
       const raw = val.toString().trim().toLowerCase().replace(',', '.');
 
-      // 1. Casillas vacías o sin entrega explícita -> FALTAN
-      if (raw === '' || raw === '-' || raw === '--' || raw === 'n/a' || 
-          raw.includes('sin entreg') || raw.includes('no entreg') || 
-          raw.includes('unsubmitted') || raw.includes('missing')) {
+      // 1. Casillas vacías, guiones o textos de no entrega -> FALTAN
+      if (raw === '' || raw === '-' || raw === '--' || raw === '---' || raw === 'n/a' || raw === 'na') {
+        return 'faltan';
+      }
+      if (raw.includes('sin entreg') || raw.includes('no entreg') || raw.includes('unsubmitted') || raw.includes('missing') || raw.includes('no realiz') || raw.includes('sin realiz')) {
         return 'faltan';
       }
 
-      // 2. Pendientes de calificación (ej. "EX", "P", "revis", "calif", "pend", "necesita") -> POR CALIFICAR
-      if (raw === 'p' || raw === 'ex' || raw === 'pend' || raw.includes('por calificar') || 
-          raw.includes('pendiente') || raw.includes('revis') || raw.includes('calif') ||
-          raw.includes('necesita') || raw.includes('ungraded') || raw.includes('submitted')) {
-        return 'porCalificar';
-      }
-
-      // 3. Cualquier valor numérico evaluado (10, 8.5, 0, 0.00, etc.) -> HECHAS
+      // 2. Valores numéricos evaluados (notas calificadas, incluyendo 0 y 0.00) -> HECHAS
       const numVal = parseFloat(raw);
       if (!isNaN(numVal)) {
         return 'hechas';
       }
 
-      // 4. Palabras de lección completada o aprobada -> HECHAS
-      if (raw.includes('complet') || raw.includes('entreg') || raw.includes('realiz') || raw.includes('hecho') || raw.includes('aprob') || raw.includes('exento')) {
+      // 3. Texto explícito de lección completada / aprobada -> HECHAS
+      if (raw.includes('complet') || raw.includes('aprob') || raw.includes('realiz') || raw.includes('hecho') || raw.includes('exento') || raw.includes('excused')) {
         return 'hechas';
       }
 
-      return 'faltan';
+      // 4. Cualquier otra entrega registrada en la casilla no evaluada numéricamente -> POR CALIFICAR
+      return 'porCalificar';
     }
 
     function calculateData() {
