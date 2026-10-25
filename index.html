@@ -383,18 +383,6 @@
       renderDashboard();
     }
 
-    function extractDayNumber(headerText, defaultIndex) {
-      const matchDia = headerText.match(/d[íi]a\s*(\d+)/i) || headerText.match(/\bd\s*(\d+)\b/i);
-      if (matchDia) return parseInt(matchDia[1], 10);
-      
-      const digits = headerText.match(/(\d+)/g);
-      if (digits && digits.length > 0) {
-        return parseInt(digits[digits.length - 1], 10);
-      }
-
-      return defaultIndex;
-    }
-
     function renderDashboard() {
       if (!parsedRows.length) return;
 
@@ -409,6 +397,8 @@
       const chkOnlyWork = document.getElementById('chkOnlyWork').checked;
 
       let lessonCols = [];
+      let currentDay = 1;
+
       for (let j = 0; j < parsedHeaders.length; j++) {
         if (j === nameIndex) continue;
         const h = parsedHeaders[j].toLowerCase().trim();
@@ -421,9 +411,15 @@
           continue;
         }
 
-        const dayNum = extractDayNumber(parsedHeaders[j], j - nameIndex);
+        const dayMatch = parsedHeaders[j].match(/d[íi]a\s*(\d+)/i) || 
+                         parsedHeaders[j].match(/\bd(\d+)\b/i) || 
+                         parsedHeaders[j].match(/^\s*(\d+)\s*[-_:]/);
 
-        if (dayNum >= dayStart && dayNum <= dayEnd) {
+        if (dayMatch) {
+          currentDay = parseInt(dayMatch[1], 10);
+        }
+
+        if (currentDay >= dayStart && currentDay <= dayEnd) {
           let groupHasWork = false;
           for (let i = 0; i < parsedRows.length; i++) {
             const val = (parsedRows[i][j] || '').trim().toLowerCase();
