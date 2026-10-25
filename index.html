@@ -218,9 +218,31 @@
       cursor: pointer;
       font-size: 0.85rem;
     }
+    .btn-action:hover {
+      background-color: var(--primary-light);
+    }
     .student-name {
       font-weight: 700;
       text-transform: uppercase;
+    }
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(0, 0, 0, 0.5);
+      justify-content: center;
+      align-items: center;
+      z-index: 1000;
+    }
+    .modal-content {
+      background: var(--card-bg);
+      color: var(--text);
+      padding: 24px;
+      border-radius: 10px;
+      max-width: 600px;
+      width: 90%;
+      max-height: 80vh;
+      overflow-y: auto;
     }
     footer {
       text-align: center;
@@ -260,22 +282,22 @@
 
     <div class="dashboard" id="dashboard">
       <div class="file-info-bar" id="fileInfoBar">
-        <span>Archivo cargado</span>
+        <span>Cargando datos...</span>
       </div>
 
       <div class="nav-tabs">
-        <button class="tab-btn active" onclick="switchTab('resumen')">📊 Resumen</button>
-        <button class="tab-btn" onclick="switchTab('estudiante')">👤 Por estudiante</button>
-        <button class="tab-btn" onclick="switchTab('dia')">📅 Por día</button>
-        <button class="tab-btn" onclick="switchTab('faltantes')">📋 Consolidado de faltantes</button>
+        <button class="tab-btn active" onclick="switchTab(this, 'resumen')">📊 Resumen</button>
+        <button class="tab-btn" onclick="switchTab(this, 'estudiante')">👤 Por estudiante</button>
+        <button class="tab-btn" onclick="switchTab(this, 'dia')">📅 Por día</button>
+        <button class="tab-btn" onclick="switchTab(this, 'faltantes')">📋 Consolidado de faltantes</button>
       </div>
 
       <div class="filter-bar">
-        <span><strong>Días a revisar:</strong> Desde <input type="number" id="dayStart" value="1" onchange="renderDashboard()"> Hasta <input type="number" id="dayEnd" value="156" onchange="renderDashboard()"></span>
+        <span><strong>Días a revisar:</strong> Desde <input type="number" id="dayStart" value="1" onchange="renderDashboard()"> Hasta <input type="number" id="dayEnd" value="1" onchange="renderDashboard()"></span>
         <label style="display:flex; align-items:center; gap:5px;">
           <input type="checkbox" id="chkOnlyWork" checked onchange="renderDashboard()"> Solo días con trabajo del grupo
         </label>
-        <span id="showingDaysText" style="color: #6b7280; font-weight: 500;">Mostrando 115 de 156 días</span>
+        <span id="showingDaysText" style="color: #6b7280; font-weight: 500;">Calculando...</span>
       </div>
 
       <div class="metrics-grid">
@@ -298,17 +320,8 @@
       </div>
 
       <div class="data-table-container">
-        <table>
-          <thead>
-            <tr>
-              <th>Estudiante</th>
-              <th style="width: 180px;">Avance</th>
-              <th>Hechas</th>
-              <th>Por calificar</th>
-              <th>Faltan</th>
-              <th>Días completos</th>
-              <th>Acción</th>
-            </tr>
+        <table id="dataTable">
+          <thead id="tableHead">
           </thead>
           <tbody id="tableBody">
           </tbody>
@@ -322,13 +335,24 @@
     </footer>
   </div>
 
+  <div class="modal-overlay" id="detailModal">
+    <div class="modal-content">
+      <h3 id="modalTitle">Detalles del estudiante</h3>
+      <div id="modalBody"></div>
+      <br>
+      <button class="btn-ctrl" onclick="closeModal()">Cerrar</button>
+    </div>
+  </div>
+
   <script>
     let currentFontSize = 15;
     let parsedRows = [];
     let parsedHeaders = [];
     let fileName = '';
     let colDayMap = [];
-    let totalDetectedDays = 156;
+    let totalDetectedDays = 1;
+    let currentTab = 'resumen';
+    let globalCalculatedData = null;
 
     function changeFontSize(delta) {
       currentFontSize += delta;
@@ -339,9 +363,15 @@
       document.body.classList.toggle('dark');
     }
 
-    function switchTab(tabName) {
+    function switchTab(btnElement, tabName) {
       document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
-      event.target.classList.add('active');
+      btnElement.classList.add('active');
+      currentTab = tabName;
+      renderDashboard();
+    }
+
+    function closeModal() {
+      document.getElementById('detailModal').style.display = 'none';
     }
 
     const fileInput = document.getElementById('fileInput');
@@ -389,9 +419,8 @@
       if (!headerText) return null;
       const clean = headerText.toLowerCase().trim();
 
-      const matchDia = clean.match(/d[íi]a\s*(\d+)/i) || 
-                       clean.match(/\bd\s*(\d+)\b/i) ||
-                       clean.match(/clase\s*(\d+)/i);
+      const matchDia = clean.match(/(?:d[íi]a|clase|lecci[óo]n|lesson|semana|day)\s*#?\s*(\d+)/i) || 
+                       clean.match(/\b[dl]\s*[-_]?\s*(\d+)\b/i);
 
       if (matchDia) return parseInt(matchDia[1], 10);
       return null;
@@ -401,11 +430,11 @@
       if (!headerText) return true;
       const h = headerText.toLowerCase().trim();
 
-      const isWordMatch = /\b(id|sis|carnet|seccion|sección|grupo|correo|email|usuario|student|estudiante|alumno|nombre)\b/i.test(h);
+      const isWordMatch = /\b(id|sis|carnet|seccion|sección|grupo|correo|email|usuario|student|estudiante|alumno|nombre|first name|last name)\b/i.test(h);
       if (isWordMatch) return true;
 
-      const isSummaryScore = /\b(total|promedio|porcentaje|acumulado|final|score|points possible|puntos posibles|read only)\b/i.test(h);
-      const isLesson = /d[íi]a|clase|lecci[óo]n/i.test(h);
+      const isSummaryScore = /\b(total|promedio|porcentaje|acumulado|final|score|points possible|puntos posibles|read only|current grade|final grade|unposted|override)\b/i.test(h);
+      const isLesson = /d[íi]a|clase|lecci[óo]n|lesson|day/i.test(h);
 
       if (isSummaryScore && !isLesson) return true;
 
@@ -427,8 +456,8 @@
         const row = parseCSVLine(lines[i], delimiter);
         if (row.length <= 1) continue;
 
-        const firstCol = (row[0] || '').toLowerCase().trim();
-        if (firstCol.includes('points possible') || firstCol.includes('puntos posibles') || firstCol.includes('read only')) {
+        const rowStr = row.join(' ').toLowerCase();
+        if (rowStr.includes('points possible') || rowStr.includes('puntos posibles') || rowStr.includes('read only')) {
           continue;
         }
 
@@ -465,7 +494,8 @@
         if (currentDay > maxDayFound) maxDayFound = currentDay;
       }
 
-      totalDetectedDays = maxDayFound > 1 ? maxDayFound : 156;
+      totalDetectedDays = maxDayFound;
+      document.getElementById('dayStart').value = 1;
       document.getElementById('dayEnd').value = totalDetectedDays;
 
       document.getElementById('dropZone').style.display = 'none';
@@ -477,29 +507,27 @@
 
     function classifyCellValue(val) {
       if (val === null || val === undefined) return 'faltan';
-      
-      // Limpiar caracteres invisibles UTF-8 BOM, NBSP y comillas sobrantes
-      const clean = val.toString().replace(/[\u200B-\u200D\uFEFF\u00A0]/g, '').trim().replace(/^"|"$/g, '');
-      if (clean === '' || clean === '-' || clean === '--' || clean.toLowerCase() === 'n/a' || clean.toLowerCase() === 'null') {
+      const raw = val.toString().trim().toLowerCase().replace(',', '.');
+
+      if (raw === '' || raw === '-' || raw === '--' || raw === 'n/a' || 
+          raw.includes('sin entreg') || raw.includes('no entreg') || 
+          raw.includes('unsubmitted') || raw.includes('missing')) {
         return 'faltan';
       }
 
-      const raw = clean.toLowerCase().replace(',', '.');
-
-      if ((raw.includes('sin entreg') || raw.includes('no entreg') || raw.includes('unsubmitted') || raw.includes('missing')) && 
-          !raw.includes('calif') && !raw.includes('revis') && !raw.includes('pend') && raw !== 'p') {
-        return 'faltan';
+      if (raw === 'p' || raw === 'pend' || raw.includes('por calificar') || 
+          raw.includes('pendiente') || raw.includes('necesita revis') || 
+          raw.includes('ungraded') || raw.includes('submitted')) {
+        return 'porCalificar';
       }
 
-      // Evaluar notas numéricas
-      const numVal = parseFloat(raw);
-      if (!isNaN(numVal)) {
+      if (raw === 'ex' || raw.includes('exento') || raw.includes('excused')) {
         return 'hechas';
       }
 
-      // Evaluar siglas o estados de revisión
-      if (raw === 'p' || raw.includes('revis') || raw.includes('calif') || raw.includes('pend') || raw.includes('necesita') || raw.includes('ex')) {
-        return 'porCalificar';
+      const numVal = parseFloat(raw);
+      if (!isNaN(numVal)) {
+        return numVal > 0 ? 'hechas' : 'faltan';
       }
 
       if (raw.includes('complet') || raw.includes('entreg') || raw.includes('realiz') || raw.includes('hecho') || raw.includes('aprob')) {
@@ -509,9 +537,7 @@
       return 'faltan';
     }
 
-    function renderDashboard() {
-      if (!parsedRows.length) return;
-
+    function calculateData() {
       let nameIndex = parsedHeaders.findIndex(h => {
         const l = h.toLowerCase().trim();
         return l.includes('estudiante') || l.includes('alumno') || l.includes('nombre') || l.includes('student');
@@ -551,11 +577,17 @@
       }
 
       let students = [];
+      let dayStatsMap = {};
+
+      activeDaysSet.forEach(d => {
+        dayStatsMap[d] = { dayNum: d, total: 0, hechasCount: 0, faltanCount: 0, completeStudents: 0 };
+      });
+
       let globalFaltan = 0;
       let globalHechas = 0;
       let globalPorCalificar = 0;
 
-      parsedRows.forEach(row => {
+      parsedRows.forEach((row, rowIndex) => {
         const name = row[nameIndex]?.trim();
         if (!name) return;
 
@@ -564,12 +596,17 @@
         let faltan = 0;
 
         let dayStatusMap = {};
+        let missingLessonsDetails = [];
 
         lessonCols.forEach(colIndex => {
           const dayNum = colDayMap[colIndex];
+          const lessonName = parsedHeaders[colIndex] || `Lección col ${colIndex}`;
+          
           if (!dayStatusMap[dayNum]) {
-            dayStatusMap[dayNum] = { hechas: 0, faltan: 0, porCalificar: 0 };
+            dayStatusMap[dayNum] = { hechas: 0, faltan: 0, porCalificar: 0, total: 0 };
           }
+
+          dayStatusMap[dayNum].total++;
 
           const status = classifyCellValue(row[colIndex]);
           if (status === 'porCalificar') {
@@ -581,13 +618,16 @@
           } else {
             faltan++;
             dayStatusMap[dayNum].faltan++;
+            missingLessonsDetails.push({ dayNum, lessonName });
           }
         });
 
         let completeDaysCount = 0;
         for (let d in dayStatusMap) {
-          if (dayStatusMap[d].faltan === 0 && (dayStatusMap[d].hechas > 0 || dayStatusMap[d].porCalificar > 0)) {
+          const stats = dayStatusMap[d];
+          if (stats.faltan === 0 && (stats.hechas > 0 || stats.porCalificar > 0)) {
             completeDaysCount++;
+            if (dayStatsMap[d]) dayStatsMap[d].completeStudents++;
           }
         }
 
@@ -599,20 +639,64 @@
         globalPorCalificar += porCalificar;
 
         students.push({
+          id: rowIndex,
           name: name,
           pct: Math.min(pct, 100),
           hechas: hechas,
           porCalificar: porCalificar,
           faltan: faltan,
-          dias: `${completeDaysCount} de ${activeDaysSet.size}`
+          totalLessons: totalLessonsStudent,
+          dias: `${completeDaysCount} de ${activeDaysSet.size}`,
+          missingDetails: missingLessonsDetails
         });
       });
+
+      return {
+        students,
+        activeDaysSet,
+        lessonCols,
+        globalHechas,
+        globalPorCalificar,
+        globalFaltan,
+        dayStatsMap
+      };
+    }
+
+    function showStudentModal(studentId) {
+      if (!globalCalculatedData) return;
+      const student = globalCalculatedData.students.find(s => s.id === studentId);
+      if (!student) return;
+
+      document.getElementById('modalTitle').innerText = `Detalles: ${student.name}`;
+      let html = `<p><strong>Avance:</strong> ${student.pct}% | <strong>Lecciones hechas:</strong> ${student.hechas} | <strong>Faltan:</strong> ${student.faltan}</p>`;
+      
+      if (student.missingDetails.length === 0) {
+        html += `<p style="color:green; font-weight:bold;">¡Felicidades! No tiene lecciones pendientes en los días revisados.</p>`;
+      } else {
+        html += `<h4>Lecciones pendientes:</h4><ul>`;
+        student.missingDetails.forEach(item => {
+          html += `<li><strong>Día ${item.dayNum}:</strong> ${item.lessonName}</li>`;
+        });
+        html += `</ul>`;
+      }
+
+      document.getElementById('modalBody').innerHTML = html;
+      document.getElementById('detailModal').style.display = 'flex';
+    }
+
+    function renderDashboard() {
+      if (!parsedRows.length) return;
+
+      const data = calculateData();
+      globalCalculatedData = data;
+
+      const { students, activeDaysSet, lessonCols, globalHechas, globalPorCalificar, globalFaltan, dayStatsMap } = data;
 
       const totalGlobal = globalHechas + globalPorCalificar + globalFaltan;
       const avgPct = totalGlobal > 0 ? Math.round(((globalHechas + globalPorCalificar) / totalGlobal) * 100) : 0;
 
       document.getElementById('fileInfoBar').innerHTML = 
-        `<span>Archivo: <strong>${fileName}</strong> · <strong>${students.length}</strong> estudiantes · <strong>1739</strong> lecciones en 156 días</span>`;
+        `<span>Archivo: <strong>${fileName}</strong> · <strong>${students.length}</strong> estudiantes · <strong>${totalGlobal}</strong> lecciones evaluadas en <strong>${activeDaysSet.size}</strong> días</span>`;
 
       document.getElementById('showingDaysText').innerText = 
         `Mostrando ${activeDaysSet.size} de ${totalDetectedDays} días`;
@@ -622,29 +706,117 @@
       document.getElementById('mPending').innerText = globalFaltan;
       document.getElementById('mAvg').innerText = avgPct + '%';
 
+      const thead = document.getElementById('tableHead');
       const tbody = document.getElementById('tableBody');
+      thead.innerHTML = '';
       tbody.innerHTML = '';
 
-      students.forEach(s => {
-        const tr = document.createElement('tr');
-        tr.innerHTML = `
-          <td class="student-name">${s.name}</td>
-          <td>
-            <div class="progress-box">
-              <span style="font-weight:bold; min-width:35px;">${s.pct}%</span>
-              <div class="progress-bar">
-                <div class="progress-fill" style="width: ${s.pct}%;"></div>
-              </div>
-            </div>
-          </td>
-          <td>${s.hechas}</td>
-          <td>${s.porCalificar}</td>
-          <td><strong>${s.faltan}</strong></td>
-          <td>${s.dias}</td>
-          <td><button class="btn-action">Ver</button></td>
+      if (currentTab === 'resumen') {
+        thead.innerHTML = `
+          <tr>
+            <th>Estudiante</th>
+            <th style="width: 180px;">Avance</th>
+            <th>Hechas</th>
+            <th>Por calificar</th>
+            <th>Faltan</th>
+            <th>Días completos</th>
+            <th>Acción</th>
+          </tr>
         `;
-        tbody.appendChild(tr);
-      });
+
+        students.forEach(s => {
+          const tr = document.createElement('tr');
+          tr.innerHTML = `
+            <td class="student-name">${s.name}</td>
+            <td>
+              <div class="progress-box">
+                <span style="font-weight:bold; min-width:35px;">${s.pct}%</span>
+                <div class="progress-bar">
+                  <div class="progress-fill" style="width: ${s.pct}%;"></div>
+                </div>
+              </div>
+            </td>
+            <td>${s.hechas}</td>
+            <td>${s.porCalificar}</td>
+            <td><strong>${s.faltan}</strong></td>
+            <td>${s.dias}</td>
+            <td><button class="btn-action" onclick="showStudentModal(${s.id})">Ver</button></td>
+          `;
+          tbody.appendChild(tr);
+        });
+      } else if (currentTab === 'estudiante') {
+        thead.innerHTML = `
+          <tr>
+            <th>Estudiante</th>
+            <th>Faltantes</th>
+            <th>Detalle de lecciones pendientes</th>
+            <th>Acción</th>
+          </tr>
+        `;
+
+        students.forEach(s => {
+          const tr = document.createElement('tr');
+          const detailsText = s.missingDetails.length > 0 
+            ? s.missingDetails.map(m => `Día ${m.dayNum}: ${m.lessonName}`).slice(0, 3).join(' | ') + (s.missingDetails.length > 3 ? '...' : '')
+            : ' Al día (Sin pendientes)';
+
+          tr.innerHTML = `
+            <td class="student-name">${s.name}</td>
+            <td><strong>${s.faltan}</strong> lecciones</td>
+            <td>${detailsText}</td>
+            <td><button class="btn-action" onclick="showStudentModal(${s.id})">Ver completo</button></td>
+          `;
+          tbody.appendChild(tr);
+        });
+      } else if (currentTab === 'dia') {
+        thead.innerHTML = `
+          <tr>
+            <th>Día</th>
+            <th>Estudiantes que completaron el día</th>
+            <th>Porcentaje de cumplimiento</th>
+          </tr>
+        `;
+
+        Object.keys(dayStatsMap).sort((a,b) => Number(a) - Number(b)).forEach(dNum => {
+          const stat = dayStatsMap[dNum];
+          const pctDay = students.length > 0 ? Math.round((stat.completeStudents / students.length) * 100) : 0;
+          const tr = document.createElement('tr');
+          tr.innerHTML = `
+            <td><strong>Día ${dNum}</strong></td>
+            <td>${stat.completeStudents} de ${students.length} estudiantes</td>
+            <td>
+              <div class="progress-box">
+                <span style="font-weight:bold; min-width:35px;">${pctDay}%</span>
+                <div class="progress-bar">
+                  <div class="progress-fill" style="width: ${pctDay}%;"></div>
+                </div>
+              </div>
+            </td>
+          `;
+          tbody.appendChild(tr);
+        });
+      } else if (currentTab === 'faltantes') {
+        thead.innerHTML = `
+          <tr>
+            <th>Estudiante</th>
+            <th>Total pendientes</th>
+            <th>Texto para enviar a padres/tutores</th>
+          </tr>
+        `;
+
+        students.filter(s => s.faltan > 0).forEach(s => {
+          const daysList = [...new Set(s.missingDetails.map(m => `Día ${m.dayNum}`))].join(', ');
+          const tr = document.createElement('tr');
+          tr.innerHTML = `
+            <td class="student-name">${s.name}</td>
+            <td><strong>${s.faltan} lecciones</strong></td>
+            <td style="font-family: monospace; font-size: 0.85rem; background: rgba(0,0,0,0.03); padding: 8px; border-radius: 4px;">
+              Estimado padre/tutor de ${s.name}: Le informamos que tiene ${s.faltan} lección(es) pendiente(s) correspondiente(s) a: ${daysList}.
+            </td>
+          `;
+          tbody.appendChild(tr);
+        });
+      }
     }
   </script>
 
