@@ -479,28 +479,23 @@
       if (val === null || val === undefined) return 'faltan';
       const raw = val.trim().toLowerCase().replace(',', '.');
 
-      // 1. Casillas vacías o sin entrega -> FALTAN
-      if (raw === '' || raw === '-' || raw === '--' || raw.includes('sin entreg') || raw.includes('no entreg') || raw.includes('unsubmitted') || raw.includes('missing')) {
+      // 1. Casillas totalmente vacías o sin entrega explícita -> FALTAN
+      if (raw === '' || raw === '-' || raw === '--' || raw === 'n/a' || raw === 'null') {
+        return 'faltan';
+      }
+      if ((raw.includes('sin entreg') || raw.includes('no entreg') || raw.includes('unsubmitted') || raw.includes('missing')) && 
+          !raw.includes('calif') && !raw.includes('revis') && !raw.includes('pend')) {
         return 'faltan';
       }
 
-      // 2. Entregadas pendientes de revisión -> POR CALIFICAR
-      if (raw === 'p' || raw.includes('revis') || raw.includes('calif') || raw.includes('pend') || raw.includes('necesita') || raw.includes('ex')) {
-        return 'porCalificar';
-      }
-
-      // 3. Cualquier nota evaluada (incluyendo 0, 0.00) -> HECHAS
+      // 2. Si hay una calificación numérica asignada (incluyendo 0, 0.00) -> HECHAS
       const numVal = parseFloat(raw);
       if (!isNaN(numVal)) {
         return 'hechas';
       }
 
-      // 4. Texto de lección entregada o aprobada -> HECHAS
-      if (raw.includes('complet') || raw.includes('entreg') || raw.includes('realiz') || raw.includes('hecho') || raw.includes('aprob')) {
-        return 'hechas';
-      }
-
-      return 'faltan';
+      // 3. Entregadas pendientes de revisión / por calificar / cualquier texto no vacío ni numérico
+      return 'porCalificar';
     }
 
     function renderDashboard() {
