@@ -477,25 +477,36 @@
 
     function classifyCellValue(val) {
       if (val === null || val === undefined) return 'faltan';
-      const raw = val.trim().toLowerCase().replace(',', '.');
-
-      // 1. Casillas totalmente vacías o sin entrega explícita -> FALTAN
-      if (raw === '' || raw === '-' || raw === '--' || raw === 'n/a' || raw === 'null') {
+      
+      // Limpiar caracteres invisibles UTF-8 BOM, NBSP y comillas sobrantes
+      const clean = val.toString().replace(/[\u200B-\u200D\uFEFF\u00A0]/g, '').trim().replace(/^"|"$/g, '');
+      if (clean === '' || clean === '-' || clean === '--' || clean.toLowerCase() === 'n/a' || clean.toLowerCase() === 'null') {
         return 'faltan';
       }
+
+      const raw = clean.toLowerCase().replace(',', '.');
+
       if ((raw.includes('sin entreg') || raw.includes('no entreg') || raw.includes('unsubmitted') || raw.includes('missing')) && 
-          !raw.includes('calif') && !raw.includes('revis') && !raw.includes('pend')) {
+          !raw.includes('calif') && !raw.includes('revis') && !raw.includes('pend') && raw !== 'p') {
         return 'faltan';
       }
 
-      // 2. Si hay una calificación numérica asignada (incluyendo 0, 0.00) -> HECHAS
+      // Evaluar notas numéricas
       const numVal = parseFloat(raw);
       if (!isNaN(numVal)) {
         return 'hechas';
       }
 
-      // 3. Entregadas pendientes de revisión / por calificar / cualquier texto no vacío ni numérico
-      return 'porCalificar';
+      // Evaluar siglas o estados de revisión
+      if (raw === 'p' || raw.includes('revis') || raw.includes('calif') || raw.includes('pend') || raw.includes('necesita') || raw.includes('ex')) {
+        return 'porCalificar';
+      }
+
+      if (raw.includes('complet') || raw.includes('entreg') || raw.includes('realiz') || raw.includes('hecho') || raw.includes('aprob')) {
+        return 'hechas';
+      }
+
+      return 'faltan';
     }
 
     function renderDashboard() {
