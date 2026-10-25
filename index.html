@@ -213,10 +213,11 @@
     .btn-action {
       background-color: transparent;
       border: 1px solid var(--border);
-      padding: 4px 10px;
-      border-radius: 4px;
+      padding: 4px 12px;
+      border-radius: 6px;
       cursor: pointer;
       font-size: 0.85rem;
+      font-weight: 600;
     }
     .btn-action:hover {
       background-color: var(--primary-light);
@@ -225,25 +226,95 @@
       font-weight: 700;
       text-transform: uppercase;
     }
-    .modal-overlay {
-      display: none;
-      position: fixed;
-      top: 0; left: 0; width: 100%; height: 100%;
-      background: rgba(0, 0, 0, 0.5);
-      justify-content: center;
-      align-items: center;
-      z-index: 1000;
+
+    /* Estilos específicos de la vista Por estudiante */
+    .student-controls-wrapper {
+      margin-bottom: 15px;
     }
-    .modal-content {
-      background: var(--card-bg);
+    .student-search-row {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 15px;
+      flex-wrap: wrap;
+    }
+    .student-search-row input {
+      flex: 1;
+      min-width: 240px;
+      padding: 8px 12px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background-color: var(--card-bg);
       color: var(--text);
-      padding: 24px;
-      border-radius: 10px;
-      max-width: 600px;
-      width: 90%;
-      max-height: 80vh;
-      overflow-y: auto;
+      font-size: 0.95rem;
     }
+    .student-search-row select {
+      flex: 1;
+      min-width: 280px;
+      padding: 8px 12px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background-color: var(--card-bg);
+      color: var(--text);
+      font-size: 0.95rem;
+      font-weight: 600;
+    }
+    .sub-filter-row {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 20px;
+      background-color: var(--card-bg);
+      padding: 10px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+    }
+    .sub-btn {
+      padding: 6px 14px;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      background: transparent;
+      color: var(--text);
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 0.9rem;
+    }
+    .sub-btn.active {
+      background-color: var(--primary);
+      color: #fff;
+      border-color: var(--primary);
+    }
+    .student-detail-card {
+      background-color: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 20px;
+      margin-bottom: 20px;
+    }
+    .student-detail-card h2 {
+      margin: 0 0 4px 0;
+      font-size: 1.3rem;
+      text-transform: uppercase;
+    }
+    .student-detail-card .email {
+      color: #6b7280;
+      margin-bottom: 12px;
+      font-size: 0.95rem;
+    }
+    .student-detail-card .stats-line {
+      font-size: 1rem;
+      font-weight: 500;
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 0.8rem;
+      font-weight: 700;
+    }
+    .badge-hecha { background: #d1fae5; color: #065f46; }
+    .badge-porCalificar { background: #fef3c7; color: #92400e; }
+    .badge-falta { background: #fee2e2; color: #991b1b; }
+
     footer {
       text-align: center;
       margin-top: 40px;
@@ -286,10 +357,10 @@
       </div>
 
       <div class="nav-tabs">
-        <button class="tab-btn active" onclick="switchTab(this, 'resumen')">📊 Resumen</button>
-        <button class="tab-btn" onclick="switchTab(this, 'estudiante')">👤 Por estudiante</button>
-        <button class="tab-btn" onclick="switchTab(this, 'dia')">📅 Por día</button>
-        <button class="tab-btn" onclick="switchTab(this, 'faltantes')">📋 Consolidado de faltantes</button>
+        <button class="tab-btn active" id="tab-btn-resumen" onclick="switchTab(this, 'resumen')">📊 Resumen</button>
+        <button class="tab-btn" id="tab-btn-estudiante" onclick="switchTab(this, 'estudiante')">👤 Por estudiante</button>
+        <button class="tab-btn" id="tab-btn-dia" onclick="switchTab(this, 'dia')">📅 Por día</button>
+        <button class="tab-btn" id="tab-btn-faltantes" onclick="switchTab(this, 'faltantes')">📋 Consolidado de faltantes</button>
       </div>
 
       <div class="filter-bar">
@@ -300,7 +371,7 @@
         <span id="showingDaysText" style="color: #6b7280; font-weight: 500;">Calculando...</span>
       </div>
 
-      <div class="metrics-grid">
+      <div class="metrics-grid" id="metricsGrid">
         <div class="metric-card">
           <div class="num" id="mStudents">0</div>
           <div class="label">estudiantes</div>
@@ -319,29 +390,14 @@
         </div>
       </div>
 
-      <div class="data-table-container">
-        <table id="dataTable">
-          <thead id="tableHead">
-          </thead>
-          <tbody id="tableBody">
-          </tbody>
-        </table>
-      </div>
+      <!-- Área de contenido dinámico -->
+      <div id="tabContentArea"></div>
     </div>
 
     <footer>
       <img src="logo.jpeg" alt="Aprendiendo con la Maestra Judith" class="footer-logo">
       <div>@licdajudith</div>
     </footer>
-  </div>
-
-  <div class="modal-overlay" id="detailModal">
-    <div class="modal-content">
-      <h3 id="modalTitle">Detalles del estudiante</h3>
-      <div id="modalBody"></div>
-      <br>
-      <button class="btn-ctrl" onclick="closeModal()">Cerrar</button>
-    </div>
   </div>
 
   <script>
@@ -353,6 +409,9 @@
     let totalDetectedDays = 1;
     let currentTab = 'resumen';
     let globalCalculatedData = null;
+    let selectedStudentIndex = 0;
+    let studentDaySubFilter = 'todos'; // 'todos', 'pendientes', 'completos'
+    let pointsPossibleRow = null;
 
     function changeFontSize(delta) {
       currentFontSize += delta;
@@ -365,13 +424,14 @@
 
     function switchTab(btnElement, tabName) {
       document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
-      btnElement.classList.add('active');
+      if (btnElement) {
+        btnElement.classList.add('active');
+      } else {
+        const targetBtn = document.getElementById(`tab-btn-${tabName}`);
+        if (targetBtn) targetBtn.classList.add('active');
+      }
       currentTab = tabName;
       renderDashboard();
-    }
-
-    function closeModal() {
-      document.getElementById('detailModal').style.display = 'none';
     }
 
     const fileInput = document.getElementById('fileInput');
@@ -452,14 +512,18 @@
       parsedHeaders = parseCSVLine(lines[0], delimiter);
 
       parsedRows = [];
+      pointsPossibleRow = null;
+
       for (let i = 1; i < lines.length; i++) {
         const row = parseCSVLine(lines[i], delimiter);
         if (row.length <= 1) continue;
 
         const rowStr = row.join(' ').toLowerCase();
-        if (rowStr.includes('points possible') || rowStr.includes('puntos posibles') || rowStr.includes('read only')) {
+        if (rowStr.includes('points possible') || rowStr.includes('puntos posibles')) {
+          pointsPossibleRow = row;
           continue;
         }
+        if (rowStr.includes('read only')) continue;
 
         parsedRows.push(row);
       }
@@ -510,26 +574,33 @@
       const raw = val.toString().trim().toLowerCase().replace(',', '.');
 
       // 1. Casillas vacías, guiones o textos de no entrega -> FALTAN
-      if (raw === '' || raw === '-' || raw === '--' || raw === '---' || raw === 'n/a' || raw === 'na') {
+      if (raw === '' || raw === '-' || raw === '--' || raw === '---' || raw === 'n/a' || raw === 'na' || raw === 'null' || raw === 'undefined') {
         return 'faltan';
       }
       if (raw.includes('sin entreg') || raw.includes('no entreg') || raw.includes('unsubmitted') || raw.includes('missing') || raw.includes('no realiz') || raw.includes('sin realiz')) {
         return 'faltan';
       }
 
-      // 2. Calificaciones numéricas ya evaluadas (10, 8.5, 0, 0.00) -> HECHAS
+      // 2. Calificaciones numéricas evaluadas (10, 8.5, 0, 0.00) -> HECHAS
       const numVal = parseFloat(raw);
       if (!isNaN(numVal)) {
         return 'hechas';
       }
 
       // 3. Textos de lección completada o aprobada -> HECHAS
-      if (raw.includes('complet') || raw.includes('aprob') || raw.includes('realiz') || raw.includes('hecho') || raw.includes('excused')) {
+      if (raw.includes('complet') || raw.includes('aprob') || raw.includes('realiz') || raw.includes('hecho')) {
         return 'hechas';
       }
 
-      // 4. Marcas de lección entregada pendiente de calificar (ej. "EX", "P", "E", "*", "revis") -> POR CALIFICAR (Suma 1 unidad)
-      return 'porCalificar';
+      // 4. Marcas explícitas de entrega pendiente de calificación ("EX", "P", "E", "*", "pend") -> POR CALIFICAR
+      if (raw === 'p' || raw === 'ex' || raw === 'e' || raw === '*' || raw === 'pend' || 
+          raw.includes('por calificar') || raw.includes('pendiente') || raw.includes('necesita revis') || 
+          raw.includes('ungraded') || raw.includes('submitted')) {
+        return 'porCalificar';
+      }
+
+      // 5. Casillas no reconocidas -> FALTAN
+      return 'faltan';
     }
 
     function calculateData() {
@@ -538,6 +609,11 @@
         return l.includes('estudiante') || l.includes('alumno') || l.includes('nombre') || l.includes('student');
       });
       if (nameIndex === -1) nameIndex = 0;
+
+      let emailIndex = parsedHeaders.findIndex(h => {
+        const l = h.toLowerCase().trim();
+        return l.includes('correo') || l.includes('email') || l.includes('usuario') || l.includes('sis');
+      });
 
       const dayStart = parseInt(document.getElementById('dayStart').value) || 1;
       const dayEnd = parseInt(document.getElementById('dayEnd').value) || totalDetectedDays;
@@ -586,12 +662,24 @@
         const name = row[nameIndex]?.trim();
         if (!name) return;
 
+        let email = emailIndex !== -1 && row[emailIndex] ? row[emailIndex].trim() : '';
+        if (!email) {
+          for (let cell of row) {
+            if (cell && cell.includes('@')) {
+              email = cell.trim();
+              break;
+            }
+          }
+        }
+
         let hechas = 0;
         let porCalificar = 0;
         let faltan = 0;
+        let earnedPoints = 0;
+        let possiblePoints = 0;
 
         let dayStatusMap = {};
-        let missingLessonsDetails = [];
+        let dayDetailsMap = {};
 
         lessonCols.forEach(colIndex => {
           const dayNum = colDayMap[colIndex];
@@ -599,13 +687,26 @@
           
           if (!dayStatusMap[dayNum]) {
             dayStatusMap[dayNum] = { hechas: 0, faltan: 0, porCalificar: 0, total: 0 };
+            dayDetailsMap[dayNum] = [];
           }
 
           dayStatusMap[dayNum].total++;
 
-          const status = classifyCellValue(row[colIndex]);
+          const rawVal = row[colIndex];
+          const status = classifyCellValue(rawVal);
+          
+          const numVal = parseFloat(strValToNum(rawVal));
+          if (!isNaN(numVal)) earnedPoints += numVal;
+
+          let ptsPos = 1;
+          if (pointsPossibleRow && pointsPossibleRow[colIndex]) {
+            const p = parseFloat(pointsPossibleRow[colIndex].replace(',', '.'));
+            if (!isNaN(p) && p > 0) ptsPos = p;
+          }
+          possiblePoints += ptsPos;
+
           if (status === 'porCalificar') {
-            porCalificar++; // Suma 1 unidad posicional por cada entrega en revisión
+            porCalificar++;
             dayStatusMap[dayNum].porCalificar++;
           } else if (status === 'hechas') {
             hechas++;
@@ -613,8 +714,14 @@
           } else {
             faltan++;
             dayStatusMap[dayNum].faltan++;
-            missingLessonsDetails.push({ dayNum, lessonName });
           }
+
+          dayDetailsMap[dayNum].push({
+            lessonName,
+            status,
+            rawVal: rawVal || '-',
+            colIndex
+          });
         });
 
         let completeDaysCount = 0;
@@ -636,13 +743,18 @@
         students.push({
           id: rowIndex,
           name: name,
+          email: email,
           pct: Math.min(pct, 100),
           hechas: hechas,
           porCalificar: porCalificar,
           faltan: faltan,
+          earnedPoints: Math.round(earnedPoints * 100) / 100,
+          possiblePoints: Math.round(possiblePoints * 100) / 100,
           totalLessons: totalLessonsStudent,
+          completeDaysCount: completeDaysCount,
           dias: `${completeDaysCount} de ${activeDaysSet.size}`,
-          missingDetails: missingLessonsDetails
+          dayStatusMap,
+          dayDetailsMap
         });
       });
 
@@ -657,26 +769,145 @@
       };
     }
 
-    function showStudentModal(studentId) {
-      if (!globalCalculatedData) return;
-      const student = globalCalculatedData.students.find(s => s.id === studentId);
+    function strValToNum(val) {
+      if (!val) return NaN;
+      return val.toString().trim().replace(',', '.');
+    }
+
+    function viewStudent(studentIdx) {
+      selectedStudentIndex = studentIdx;
+      switchTab(null, 'estudiante');
+    }
+
+    function setStudentSubFilter(filterType) {
+      studentDaySubFilter = filterType;
+      renderStudentDetailView();
+    }
+
+    function filterStudentDropdown() {
+      const q = document.getElementById('studentSearch').value.toLowerCase().trim();
+      const select = document.getElementById('studentSelect');
+      if (!select) return;
+
+      select.innerHTML = '';
+      globalCalculatedData.students.forEach((s, idx) => {
+        if (s.name.toLowerCase().includes(q)) {
+          const opt = document.createElement('option');
+          opt.value = idx;
+          opt.textContent = s.name;
+          select.appendChild(opt);
+        }
+      });
+
+      if (select.options.length > 0) {
+        selectedStudentIndex = parseInt(select.value);
+        renderStudentTableOnly();
+      }
+    }
+
+    function renderStudentDetailView() {
+      const area = document.getElementById('tabContentArea');
+      const students = globalCalculatedData.students;
+      
+      if (!students.length) return;
+      if (selectedStudentIndex >= students.length) selectedStudentIndex = 0;
+
+      let selectOptionsHTML = students.map((s, idx) => 
+        `<option value="${idx}" ${idx === selectedStudentIndex ? 'selected' : ''}>${s.name}</option>`
+      ).join('');
+
+      let html = `
+        <div class="student-controls-wrapper">
+          <div class="student-search-row">
+            <input type="text" id="studentSearch" placeholder="🔍 Escriba parte del nombre..." oninput="filterStudentDropdown()">
+            <select id="studentSelect" onchange="selectedStudentIndex=parseInt(this.value); renderStudentTableOnly();">
+              ${selectOptionsHTML}
+            </select>
+          </div>
+
+          <div class="sub-filter-row">
+            <button class="sub-btn ${studentDaySubFilter === 'todos' ? 'active' : ''}" onclick="setStudentSubFilter('todos')">Todos los días</button>
+            <button class="sub-btn ${studentDaySubFilter === 'pendientes' ? 'active' : ''}" onclick="setStudentSubFilter('pendientes')">Solo con pendientes</button>
+            <button class="sub-btn ${studentDaySubFilter === 'completos' ? 'active' : ''}" onclick="setStudentSubFilter('completos')">Solo completos</button>
+          </div>
+        </div>
+
+        <div id="studentDetailBody"></div>
+      `;
+
+      area.innerHTML = html;
+      renderStudentTableOnly();
+    }
+
+    function renderStudentTableOnly() {
+      const bodyArea = document.getElementById('studentDetailBody');
+      if (!bodyArea) return;
+
+      const student = globalCalculatedData.students[selectedStudentIndex];
       if (!student) return;
 
-      document.getElementById('modalTitle').innerText = `Detalles: ${student.name}`;
-      let html = `<p><strong>Avance:</strong> ${student.pct}% | <strong>Lecciones hechas:</strong> ${student.hechas} | <strong>Por calificar:</strong> ${student.porCalificar} | <strong>Faltan:</strong> ${student.faltan}</p>`;
-      
-      if (student.missingDetails.length === 0) {
-        html += `<p style="color:green; font-weight:bold;">¡Felicidades! No tiene lecciones pendientes en los días revisados.</p>`;
-      } else {
-        html += `<h4>Lecciones pendientes:</h4><ul>`;
-        student.missingDetails.forEach(item => {
-          html += `<li><strong>Día ${item.dayNum}:</strong> ${item.lessonName}</li>`;
-        });
-        html += `</ul>`;
-      }
+      let html = `
+        <div class="student-detail-card">
+          <h2>${student.name}</h2>
+          <div class="email">${student.email || 'Sin correo registrado'}</div>
+          <div class="stats-line">
+            Faltan <strong>${student.faltan}</strong> lecciones · Días completos: <strong>${student.dias}</strong> · Puntos: <strong>${student.earnedPoints}</strong> de ${student.possiblePoints}
+          </div>
+        </div>
 
-      document.getElementById('modalBody').innerHTML = html;
-      document.getElementById('detailModal').style.display = 'flex';
+        <div class="data-table-container">
+          <table>
+            <thead>
+              <tr>
+                <th>Día</th>
+                <th>Lección</th>
+                <th>Valor registrado</th>
+                <th>Estado</th>
+              </tr>
+            </thead>
+            <tbody>
+      `;
+
+      let activeDaysSorted = Array.from(globalCalculatedData.activeDaysSet).sort((a,b) => a - b);
+
+      activeDaysSorted.forEach(dNum => {
+        const dayStats = student.dayStatusMap[dNum];
+        const isComplete = dayStats && dayStats.faltan === 0;
+        const hasPending = dayStats && dayStats.faltan > 0;
+
+        if (studentDaySubFilter === 'pendientes' && !hasPending) return;
+        if (studentDaySubFilter === 'completos' && !isComplete) return;
+
+        const details = student.dayDetailsMap[dNum] || [];
+        details.forEach(item => {
+          let badgeClass = 'badge-falta';
+          let statusLabel = 'Falta';
+          if (item.status === 'hechas') {
+            badgeClass = 'badge-hecha';
+            statusLabel = 'Hecha / Evaluada';
+          } else if (item.status === 'porCalificar') {
+            badgeClass = 'badge-porCalificar';
+            statusLabel = 'Por calificar';
+          }
+
+          html += `
+            <tr>
+              <td><strong>Día ${dNum}</strong></td>
+              <td>${item.lessonName}</td>
+              <td><code>${item.rawVal}</code></td>
+              <td><span class="badge ${badgeClass}">${statusLabel}</span></td>
+            </tr>
+          `;
+        });
+      });
+
+      html += `
+            </tbody>
+          </table>
+        </div>
+      `;
+
+      bodyArea.innerHTML = html;
     }
 
     function renderDashboard() {
@@ -685,7 +916,7 @@
       const data = calculateData();
       globalCalculatedData = data;
 
-      const { students, activeDaysSet, lessonCols, globalHechas, globalPorCalificar, globalFaltan, dayStatsMap } = data;
+      const { students, activeDaysSet, globalHechas, globalPorCalificar, globalFaltan, dayStatsMap } = data;
 
       const totalGlobal = globalHechas + globalPorCalificar + globalFaltan;
       const avgPct = totalGlobal > 0 ? Math.round(((globalHechas + globalPorCalificar) / totalGlobal) * 100) : 0;
@@ -701,116 +932,127 @@
       document.getElementById('mPending').innerText = globalFaltan;
       document.getElementById('mAvg').innerText = avgPct + '%';
 
-      const thead = document.getElementById('tableHead');
-      const tbody = document.getElementById('tableBody');
-      thead.innerHTML = '';
-      tbody.innerHTML = '';
+      const metricsGrid = document.getElementById('metricsGrid');
+      const area = document.getElementById('tabContentArea');
+
+      if (currentTab === 'estudiante') {
+        metricsGrid.style.display = 'none';
+        renderStudentDetailView();
+        return;
+      }
+
+      metricsGrid.style.display = 'grid';
 
       if (currentTab === 'resumen') {
-        thead.innerHTML = `
-          <tr>
-            <th>Estudiante</th>
-            <th style="width: 180px;">Avance</th>
-            <th>Hechas</th>
-            <th>Por calificar</th>
-            <th>Faltan</th>
-            <th>Días completos</th>
-            <th>Acción</th>
-          </tr>
+        let html = `
+          <div class="data-table-container">
+            <table>
+              <thead>
+                <tr>
+                  <th>Estudiante</th>
+                  <th style="width: 180px;">Avance</th>
+                  <th>Hechas</th>
+                  <th>Por calificar</th>
+                  <th>Faltan</th>
+                  <th>Días completos</th>
+                  <th>Acción</th>
+                </tr>
+              </thead>
+              <tbody>
         `;
 
-        students.forEach(s => {
-          const tr = document.createElement('tr');
-          tr.innerHTML = `
-            <td class="student-name">${s.name}</td>
-            <td>
-              <div class="progress-box">
-                <span style="font-weight:bold; min-width:35px;">${s.pct}%</span>
-                <div class="progress-bar">
-                  <div class="progress-fill" style="width: ${s.pct}%;"></div>
+        students.forEach((s, idx) => {
+          html += `
+            <tr>
+              <td class="student-name">${s.name}</td>
+              <td>
+                <div class="progress-box">
+                  <span style="font-weight:bold; min-width:35px;">${s.pct}%</span>
+                  <div class="progress-bar">
+                    <div class="progress-fill" style="width: ${s.pct}%;"></div>
+                  </div>
                 </div>
-              </div>
-            </td>
-            <td>${s.hechas}</td>
-            <td>${s.porCalificar}</td>
-            <td><strong>${s.faltan}</strong></td>
-            <td>${s.dias}</td>
-            <td><button class="btn-action" onclick="showStudentModal(${s.id})">Ver</button></td>
+              </td>
+              <td>${s.hechas}</td>
+              <td>${s.porCalificar}</td>
+              <td><strong>${s.faltan}</strong></td>
+              <td>${s.dias}</td>
+              <td><button class="btn-action" onclick="viewStudent(${idx})">Ver</button></td>
+            </tr>
           `;
-          tbody.appendChild(tr);
         });
-      } else if (currentTab === 'estudiante') {
-        thead.innerHTML = `
-          <tr>
-            <th>Estudiante</th>
-            <th>Faltantes</th>
-            <th>Detalle de lecciones pendientes</th>
-            <th>Acción</th>
-          </tr>
-        `;
 
-        students.forEach(s => {
-          const tr = document.createElement('tr');
-          const detailsText = s.missingDetails.length > 0 
-            ? s.missingDetails.map(m => `Día ${m.dayNum}: ${m.lessonName}`).slice(0, 3).join(' | ') + (s.missingDetails.length > 3 ? '...' : '')
-            : ' Al día (Sin pendientes)';
-
-          tr.innerHTML = `
-            <td class="student-name">${s.name}</td>
-            <td><strong>${s.faltan}</strong> lecciones</td>
-            <td>${detailsText}</td>
-            <td><button class="btn-action" onclick="showStudentModal(${s.id})">Ver completo</button></td>
-          `;
-          tbody.appendChild(tr);
-        });
+        html += `</tbody></table></div>`;
+        area.innerHTML = html;
       } else if (currentTab === 'dia') {
-        thead.innerHTML = `
-          <tr>
-            <th>Día</th>
-            <th>Estudiantes que completaron el día</th>
-            <th>Porcentaje de cumplimiento</th>
-          </tr>
+        let html = `
+          <div class="data-table-container">
+            <table>
+              <thead>
+                <tr>
+                  <th>Día</th>
+                  <th>Estudiantes que completaron el día</th>
+                  <th>Porcentaje de cumplimiento</th>
+                </tr>
+              </thead>
+              <tbody>
         `;
 
         Object.keys(dayStatsMap).sort((a,b) => Number(a) - Number(b)).forEach(dNum => {
           const stat = dayStatsMap[dNum];
           const pctDay = students.length > 0 ? Math.round((stat.completeStudents / students.length) * 100) : 0;
-          const tr = document.createElement('tr');
-          tr.innerHTML = `
-            <td><strong>Día ${dNum}</strong></td>
-            <td>${stat.completeStudents} de ${students.length} estudiantes</td>
-            <td>
-              <div class="progress-box">
-                <span style="font-weight:bold; min-width:35px;">${pctDay}%</span>
-                <div class="progress-bar">
-                  <div class="progress-fill" style="width: ${pctDay}%;"></div>
+          html += `
+            <tr>
+              <td><strong>Día ${dNum}</strong></td>
+              <td>${stat.completeStudents} de ${students.length} estudiantes</td>
+              <td>
+                <div class="progress-box">
+                  <span style="font-weight:bold; min-width:35px;">${pctDay}%</span>
+                  <div class="progress-bar">
+                    <div class="progress-fill" style="width: ${pctDay}%;"></div>
+                  </div>
                 </div>
-              </div>
-            </td>
+              </td>
+            </tr>
           `;
-          tbody.appendChild(tr);
         });
+
+        html += `</tbody></table></div>`;
+        area.innerHTML = html;
       } else if (currentTab === 'faltantes') {
-        thead.innerHTML = `
-          <tr>
-            <th>Estudiante</th>
-            <th>Total pendientes</th>
-            <th>Texto para enviar a padres/tutores</th>
-          </tr>
+        let html = `
+          <div class="data-table-container">
+            <table>
+              <thead>
+                <tr>
+                  <th>Estudiante</th>
+                  <th>Total pendientes</th>
+                  <th>Texto para enviar a padres/tutores</th>
+                </tr>
+              </thead>
+              <tbody>
         `;
 
         students.filter(s => s.faltan > 0).forEach(s => {
-          const daysList = [...new Set(s.missingDetails.map(m => `Día ${m.dayNum}`))].join(', ');
-          const tr = document.createElement('tr');
-          tr.innerHTML = `
-            <td class="student-name">${s.name}</td>
-            <td><strong>${s.faltan} lecciones</strong></td>
-            <td style="font-family: monospace; font-size: 0.85rem; background: rgba(0,0,0,0.03); padding: 8px; border-radius: 4px;">
-              Estimado padre/tutor de ${s.name}: Le informamos que tiene ${s.faltan} lección(es) pendiente(s) correspondiente(s) a: ${daysList}.
-            </td>
+          let missingDays = [];
+          for (let d in s.dayStatusMap) {
+            if (s.dayStatusMap[d].faltan > 0) missingDays.push(`Día ${d}`);
+          }
+          const daysList = missingDays.join(', ');
+
+          html += `
+            <tr>
+              <td class="student-name">${s.name}</td>
+              <td><strong>${s.faltan} lecciones</strong></td>
+              <td style="font-family: monospace; font-size: 0.85rem; background: rgba(0,0,0,0.03); padding: 8px; border-radius: 4px;">
+                Estimado padre/tutor de ${s.name}: Le informamos que tiene ${s.faltan} lección(es) pendiente(s) correspondiente(s) a: ${daysList}.
+              </td>
+            </tr>
           `;
-          tbody.appendChild(tr);
         });
+
+        html += `</tbody></table></div>`;
+        area.innerHTML = html;
       }
     }
   </script>
