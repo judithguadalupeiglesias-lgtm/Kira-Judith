@@ -227,7 +227,7 @@
       text-transform: uppercase;
     }
 
-    /* Estilos específicos de la vista Por estudiante */
+    /* Estilos de la vista Por estudiante */
     .student-controls-wrapper {
       margin-bottom: 15px;
     }
@@ -364,9 +364,9 @@
       </div>
 
       <div class="filter-bar">
-        <span><strong>Días a revisar:</strong> Desde <input type="number" id="dayStart" value="1" onchange="renderDashboard()"> Hasta <input type="number" id="dayEnd" value="1" onchange="renderDashboard()"></span>
+        <span><strong>Días a revisar:</strong> Desde <input type="number" id="dayStart" value="1" onchange="renderDashboard()"> Hasta <input type="number" id="dayEnd" value="115" onchange="renderDashboard()"></span>
         <label style="display:flex; align-items:center; gap:5px;">
-          <input type="checkbox" id="chkOnlyWork" checked onchange="renderDashboard()"> Solo días con trabajo del grupo
+          <input type="checkbox" id="chkOnlyWork" checked onchange="toggleOnlyWorkFilter()"> Solo días con trabajo del grupo
         </label>
         <span id="showingDaysText" style="color: #6b7280; font-weight: 500;">Calculando...</span>
       </div>
@@ -406,11 +406,12 @@
     let parsedHeaders = [];
     let fileName = '';
     let colDayMap = [];
-    let totalDetectedDays = 1;
+    let totalDetectedDays = 156;
+    let maxWorkDayDetected = 115;
     let currentTab = 'resumen';
     let globalCalculatedData = null;
     let selectedStudentIndex = 0;
-    let studentDaySubFilter = 'todos'; // 'todos', 'pendientes', 'completos'
+    let studentDaySubFilter = 'todos';
     let pointsPossibleRow = null;
 
     function changeFontSize(delta) {
@@ -431,6 +432,12 @@
         if (targetBtn) targetBtn.classList.add('active');
       }
       currentTab = tabName;
+      renderDashboard();
+    }
+
+    function toggleOnlyWorkFilter() {
+      const chk = document.getElementById('chkOnlyWork').checked;
+      document.getElementById('dayEnd').value = chk ? maxWorkDayDetected : totalDetectedDays;
       renderDashboard();
     }
 
@@ -558,9 +565,27 @@
         if (currentDay > maxDayFound) maxDayFound = currentDay;
       }
 
-      totalDetectedDays = maxDayFound;
+      totalDetectedDays = maxDayFound > 1 ? maxDayFound : 156;
+
+      // Detectar el día máximo con trabajo real del grupo
+      let daysWithWork = new Set();
+      for (let j = 0; j < parsedHeaders.length; j++) {
+        const dNum = colDayMap[j];
+        if (dNum > 0) {
+          for (let i = 0; i < parsedRows.length; i++) {
+            const status = classifyCellValue(parsedRows[i][j]);
+            if (status === 'hechas' || status === 'porCalificar') {
+              daysWithWork.add(dNum);
+              break;
+            }
+          }
+        }
+      }
+
+      maxWorkDayDetected = daysWithWork.size > 0 ? Math.max(...Array.from(daysWithWork)) : totalDetectedDays;
+
       document.getElementById('dayStart').value = 1;
-      document.getElementById('dayEnd').value = totalDetectedDays;
+      document.getElementById('dayEnd').value = maxWorkDayDetected; // Auto-ajuste al día 115
 
       document.getElementById('dropZone').style.display = 'none';
       document.getElementById('dashboard').style.display = 'block';
@@ -592,14 +617,13 @@
         return 'hechas';
       }
 
-      // 4. Marcas explícitas de entrega pendiente de calificación ("EX", "P", "E", "*", "pend") -> POR CALIFICAR
+      // 4. Marcas de lección entregada pendiente de calificar -> POR CALIFICAR
       if (raw === 'p' || raw === 'ex' || raw === 'e' || raw === '*' || raw === 'pend' || 
           raw.includes('por calificar') || raw.includes('pendiente') || raw.includes('necesita revis') || 
           raw.includes('ungraded') || raw.includes('submitted')) {
         return 'porCalificar';
       }
 
-      // 5. Casillas no reconocidas -> FALTAN
       return 'faltan';
     }
 
@@ -616,7 +640,7 @@
       });
 
       const dayStart = parseInt(document.getElementById('dayStart').value) || 1;
-      const dayEnd = parseInt(document.getElementById('dayEnd').value) || totalDetectedDays;
+      const dayEnd = parseInt(document.getElementById('dayEnd').value) || maxWorkDayDetected;
       const chkOnlyWork = document.getElementById('chkOnlyWork').checked;
 
       let daysWithWorkSet = new Set();
