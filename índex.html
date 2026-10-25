@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>📋 Lecciones pendientes por estudiante - Profe Judith</title>
+  <style>
+    :root {
+      --primary: #1e3a8a;
+      --primary-hover: #1d4ed8;
+      --bg: #f8fafc;
+      --card-bg: #ffffff;
+      --text: #0f172a;
+      --text-secondary: #475569;
+      --border: #e2e8f0;
+      --warning-bg: #fef3c7;
+      --warning-text: #92400e;
+      --success-bg: #dcfce7;
+      --success-text: #166534;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+    }
+
+    body {
+      background-color: var(--bg);
+      color: var(--text);
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+    }
+
+    header {
+      background-color: var(--primary);
+      color: white;
+      padding: 24px 16px;
+      text-align: center;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    header h1 {
+      font-size: 1.6rem;
+      margin-bottom: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+
+    header p {
+      font-size: 0.95rem;
+      opacity: 0.9;
+    }
+
+    main {
+      max-width: 800px;
+      width: 100%;
+      margin: 20px auto;
+      padding: 0 16px;
+      flex: 1;
+    }
+
+    .card {
+      background: var(--card-bg);
+      border-radius: 12px;
+      padding: 20px;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+      border: 1px solid var(--border);
+      margin-bottom: 20px;
+    }
+
+    .search-box {
+      margin-bottom: 16px;
+    }
+
+    label {
+      display: block;
+      font-weight: 600;
+      margin-bottom: 8px;
+      color: var(--text-secondary);
+    }
+
+    input, select {
+      width: 100%;
+      padding: 12px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      font-size: 1rem;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    input:focus, select:focus {
+      border-color: var(--primary);
+    }
+
+    .student-info {
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 15px;
+      margin-bottom: 15px;
+    }
+
+    .student-info h2 {
+      color: var(--primary);
+      font-size: 1.3rem;
+      margin-bottom: 6px;
+    }
+
+    .badge-days {
+      display: inline-block;
+      background: var(--warning-bg);
+      color: var(--warning-text);
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-weight: 600;
+      font-size: 0.85rem;
+      margin-top: 6px;
+    }
+
+    .lesson-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .lesson-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px;
+      background: #f1f5f9;
+      border-radius: 8px;
+      font-size: 0.95rem;
+    }
+
+    .status-tag {
+      font-size: 0.8rem;
+      padding: 4px 8px;
+      border-radius: 6px;
+      font-weight: bold;
+    }
+
+    .status-pending {
+      background: #fee2e2;
+      color: #991b1b;
+    }
+
+    .status-completed {
+      background: var(--success-bg);
+      color: var(--success-text);
+    }
+
+    .no-results {
+      text-align: center;
+      color: var(--text-secondary);
+      padding: 20px 0;
+    }
+
+    footer {
+      text-align: center;
+      padding: 20px;
+      background: #ffffff;
+      border-top: 1px solid var(--border);
+      margin-top: auto;
+    }
+
+    footer a {
+      color: var(--primary);
+      text-decoration: none;
+      font-weight: bold;
+    }
+
+    footer a:hover {
+      text-decoration: underline;
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <h1>📋 Lecciones pendientes por estudiante</h1>
+    <p>Portal de consulta pedagógica - Profe Judith</p>
+  </header>
+
+  <main>
+    <section class="card">
+      <div class="search-box">
+        <label for="inputBuscar">Selecciona o busca un estudiante:</label>
+        <input type="text" id="inputBuscar" placeholder="Escribe el nombre del alumno..." list="listaEstudiantes">
+        <datalist id="listaEstudiantes">
+          <!-- Se llena automáticamente con JS -->
+        </datalist>
+      </div>
+    </section>
+
+    <section class="card" id="seccionResultado">
+      <div class="no-results">
+        👈 Ingresa o selecciona un nombre para revisar sus lecciones.
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <a href="#">@profejudith</a>
+  </footer>
+
+  <script>
+    // BASE DE DATOS DE EJEMPLO
+    // Puedes agregar, modificar o quitar alumnos aquí
+    const datosAlumnos = [
+      {
+        nombre: "Ana Martínez",
+        diasARevisar: 5,
+        lecciones: [
+          { titulo: "Unidad 1: Introducción a la Programación", pendiente: true },
+          { titulo: "Unidad 2: Bucles y Funciones", pendiente: true },
+          { titulo: "Evaluación Diagnóstica", pendiente: false }
+        ]
+      },
+      {
+        nombre: "Carlos Gómez",
+        diasARevisar: 2,
+        lecciones: [
+          { titulo: "Unidad 3: Estructuras de Datos", pendiente: true }
+        ]
+      },
+      {
+        nombre: "María Rodríguez",
+        diasARevisar: 0,
+        lecciones: [
+          { titulo: "¡Al día! No tiene lecciones pendientes.", pendiente: false }
+        ]
+      }
+    ];
+
+    const inputBuscar = document.getElementById('inputBuscar');
+    const datalist = document.getElementById('listaEstudiantes');
+    const seccionResultado = document.getElementById('seccionResultado');
+
+    // Cargar sugerencias en el buscador
+    datosAlumnos.forEach(alumno => {
+      const option = document.createElement('option');
+      option.value = alumno.nombre;
+      datalist.appendChild(option);
+    });
+
+    // Escuchar la búsqueda
+    inputBuscar.addEventListener('input', () => {
+      const valor = inputBuscar.value.trim().toLowerCase();
+      const alumnoEncontrado = datosAlumnos.find(a => a.nombre.toLowerCase() === valor);
+
+      if (alumnoEncontrado) {
+        mostrarDatosAlumno(alumnoEncontrado);
+      } else if (valor === "") {
+        seccionResultado.innerHTML = `
+          <div class="no-results">
+            👈 Ingresa o selecciona un nombre para revisar sus lecciones.
+          </div>
+        `;
+      } else {
+        seccionResultado.innerHTML = `
+          <div class="no-results">
+            ⚠️ No se encontró al estudiante "${inputBuscar.value}".
+          </div>
+        `;
+      }
+    });
+
+    // Renderizar información del estudiante
+    function mostrarDatosAlumno(alumno) {
+      const pendientesCount = alumno.lecciones.filter(l => l.pendiente).length;
+
+      let htmlLecciones = alumno.lecciones.map(l => `
+        <li class="lesson-item">
+          <span>${l.titulo}</span>
+          <span class="status-tag ${l.pendiente ? 'status-pending' : 'status-completed'}">
+            ${l.pendiente ? 'Pendiente' : 'Completado'}
+          </span>
+        </li>
+      `).join('');
+
+      seccionResultado.innerHTML = `
+        <div class="student-info">
+          <h2>👤 ${alumno.nombre}</h2>
+          <div>
+            <b>Lecciones pendientes:</b> ${pendientesCount}
+          </div>
+          <span class="badge-days">📅 Días a revisar: ${alumno.diasARevisar} días</span>
+        </div>
+        <h3 style="margin-bottom: 12px; font-size: 1.05rem;">Detalle de módulos:</h3>
+        <ul class="lesson-list">
+          ${htmlLecciones}
+        </ul>
+      `;
+    }
+  </script>
+
+</body>
+</html>
