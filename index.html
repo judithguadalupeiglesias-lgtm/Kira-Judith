@@ -273,7 +273,7 @@
       <div class="filter-bar">
         <span><strong>Días a revisar:</strong> Desde <input type="number" id="dayStart" value="1" onchange="renderDashboard()"> Hasta <input type="number" id="dayEnd" value="115" onchange="renderDashboard()"></span>
         <label style="display:flex; align-items:center; gap:5px;">
-          <input type="checkbox" id="chkOnlyWork" checked onchange="renderDashboard()"> Solo días con trabajo del grupo
+          <input type="checkbox" id="chkOnlyWork" onchange="renderDashboard()"> Solo días con trabajo del grupo
         </label>
       </div>
 
@@ -383,6 +383,16 @@
       renderDashboard();
     }
 
+    function extractDayNumber(headerText, defaultIndex) {
+      const matchDia = headerText.match(/d[íi]a\s*(\d+)/i) || headerText.match(/\bd\s*(\d+)\b/i);
+      if (matchDia) return parseInt(matchDia[1], 10);
+      
+      const leadingDigits = headerText.match(/^(\d+)/);
+      if (leadingDigits) return parseInt(leadingDigits[1], 10);
+
+      return defaultIndex;
+    }
+
     function renderDashboard() {
       if (!parsedRows.length) return;
 
@@ -410,14 +420,13 @@
           continue;
         }
 
-        const dayMatch = parsedHeaders[j].match(/\d+/);
-        const dayNum = dayMatch ? parseInt(dayMatch[0]) : (j - nameIndex);
+        const dayNum = extractDayNumber(parsedHeaders[j], j - nameIndex);
 
         if (dayNum >= dayStart && dayNum <= dayEnd) {
           let groupHasWork = false;
           for (let i = 0; i < parsedRows.length; i++) {
             const val = (parsedRows[i][j] || '').trim();
-            if (val !== '' && val !== '0' && val !== '-') {
+            if (val !== '' && val !== '0' && val !== '0.00' && val !== '-') {
               groupHasWork = true;
               break;
             }
@@ -443,17 +452,15 @@
         let faltan = 0;
 
         lessonCols.forEach(colIndex => {
-          const rawVal = (row[colIndex] || '').trim().toLowerCase();
+          const rawVal = (row[colIndex] || '').trim().toLowerCase().replace(',', '.');
 
-          if (rawVal === '' || rawVal === '0' || rawVal === '-') {
+          if (rawVal === '' || rawVal === '0' || rawVal === '0.00' || rawVal === '-' || rawVal === '0%') {
             faltan++;
-          } else if (rawVal.includes('revisión') || rawVal.includes('calificar') || rawVal === 'p') {
+          } else if (rawVal.includes('revisión') || rawVal.includes('revision') || rawVal.includes('calificar') || rawVal === 'p') {
             porCalificar++;
           } else {
             const numVal = parseFloat(rawVal);
             if (!isNaN(numVal) && numVal > 0) {
-              hechas++;
-            } else if (isNaN(numVal) && rawVal !== '') {
               hechas++;
             } else {
               faltan++;
@@ -538,4 +545,3 @@
 
 </body>
 </html>
-    
