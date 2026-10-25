@@ -385,47 +385,46 @@
 
       const dayStart = parseInt(document.getElementById('dayStart').value) || 1;
       const dayEnd = parseInt(document.getElementById('dayEnd').value) || 115;
+      const chkOnlyWork = document.getElementById('chkOnlyWork').checked;
 
-      // Detect and process ONLY valid daily lesson columns (ignoring ID, Carnet, and Summary/Total columns at the end)
+      // Identify valid activity columns (1 lesson unit per column)
       let lessonCols = [];
       for (let j = 0; j < parsedHeaders.length; j++) {
         if (j === nameIndex) continue;
         const h = parsedHeaders[j].toLowerCase().trim();
 
-        // Ignore metadata and summary columns
+        // Skip metadata, IDs, or summary columns
         if (h.includes('id') || h.includes('carnet') || h.includes('usuario') || 
-            h.includes('correo') || h.includes('email') || h.includes('total') || 
+            h.includes('correo') || h.includes('email') || h.includes('seccion') || 
+            h.includes('sección') || h.includes('grupo') || h.includes('total') || 
             h.includes('promedio') || h.includes('%') || h.includes('porcentaje') || 
             h.includes('final') || h.includes('acumulado')) {
           continue;
         }
 
-        // Determine max points for this lesson column
-        let maxVal = 0;
-        for (let i = 0; i < parsedRows.length; i++) {
-          const v = parseFloat(parsedRows[i][j]) || 0;
-          if (v > maxVal) maxVal = v;
-        }
-
-        // If max value exceeds standard lesson scores (> 500), skip summary columns
-        if (maxVal > 500) continue;
-
-        // Check day number filter
         const dayMatch = parsedHeaders[j].match(/\d+/);
         const dayNum = dayMatch ? parseInt(dayMatch[0]) : (j - nameIndex);
 
         if (dayNum >= dayStart && dayNum <= dayEnd) {
-          lessonCols.push({
-            index: j,
-            maxPoints: Math.round(maxVal > 0 ? maxVal : 10)
-          });
+          let groupHasWork = false;
+          for (let i = 0; i < parsedRows.length; i++) {
+            const val = (parsedRows[i][j] || '').trim();
+            if (val !== '' && val !== '0' && val !== '-') {
+              groupHasWork = true;
+              break;
+            }
+          }
+
+          if (!chkOnlyWork || groupHasWork) {
+            lessonCols.push(j);
+          }
         }
       }
 
       let students = [];
       let globalFaltan = 0;
       let globalHechas = 0;
-      let globalTotalExpected = 0;
+      let globalPorCalificar = 0;
 
       parsedRows.forEach(row => {
         const name = row[nameIndex]?.trim();
@@ -434,49 +433,54 @@
         let hechas = 0;
         let porCalificar = 0;
         let faltan = 0;
-        let expectedTotal = 0;
 
-        lessonCols.forEach(col => {
-          const maxP = col.maxPoints;
-          const rawVal = (row[col.index] || '').trim();
-          const earned = parseFloat(rawVal) || 0;
+        lessonCols.forEach(colIndex => {
+          const rawVal = (row[colIndex] || '').trim().toLowerCase();
 
-          expectedTotal += maxP;
-
-          if (rawVal === '' || rawVal === '-' || earned === 0) {
-            faltan += maxP;
-          } else if (rawVal.toLowerCase().includes('revisión') || rawVal.toLowerCase().includes('calificar')) {
-            porCalificar += maxP;
+          if (rawVal === '' || rawVal === '0' || rawVal === '-') {
+            faltan++;
+          } else if (rawVal.includes('revisión') || rawVal.includes('calificar') || rawVal === 'p') {
+            porCalificar++;
           } else {
-            hechas += earned;
-            const diff = maxP - earned;
-            if (diff > 0) faltan += diff;
+            const numVal = parseFloat(rawVal);
+            if (!isNaN(numVal) && numVal > 0) {
+              hechas++;
+            } else if (isNaN(numVal) && rawVal !== '') {
+              hechas++;
+            } else {
+              faltan++;
+            }
           }
         });
 
-        const pct = Math.round((hechas / (expectedTotal || 1)) * 100);
+        const totalLessonsStudent = hechas + porCalificar + faltan;
+        const pct = totalLessonsStudent > 0 ? Math.round((hechas / totalLessonsStudent) * 100) : 0;
+
         globalFaltan += faltan;
         globalHechas += hechas;
-        globalTotalExpected += expectedTotal;
+        globalPorCalificar += porCalificar;
+
+        const daysCompleted = totalLessonsStudent > 0 ? Math.round((hechas / totalLessonsStudent) * (dayEnd - dayStart + 1)) : 0;
 
         students.push({
           name: name,
           pct: Math.min(pct, 100),
-          hechas: Math.round(hechas),
-          porCalificar: Math.round(porCalificar),
-          faltan: Math.round(faltan),
-          dias: `${Math.round((hechas / (expectedTotal || 1)) * 115)} de 115`
+          hechas: hechas,
+          porCalificar: porCalificar,
+          faltan: faltan,
+          dias: `${daysCompleted} de ${dayEnd - dayStart + 1}`
         });
       });
+
+      const totalGlobal = globalHechas + globalPorCalificar + globalFaltan;
+      const avgPct = totalGlobal > 0 ? Math.round((globalHechas / totalGlobal) * 100) : 0;
 
       document.getElementById('fileInfoBar').innerHTML = 
         `<span>Archivo: <strong>${fileName}</strong> · <strong>${students.length}</strong> estudiantes · <strong>1739</strong> lecciones en 156 días</span>`;
 
       document.getElementById('mStudents').innerText = students.length;
       document.getElementById('mDays').innerText = (dayEnd - dayStart + 1);
-      document.getElementById('mPending').innerText = Math.round(globalFaltan);
-      
-      const avgPct = Math.round((globalHechas / (globalTotalExpected || 1)) * 100);
+      document.getElementById('mPending').innerText = globalFaltan;
       document.getElementById('mAvg').innerText = avgPct + '%';
 
       const tbody = document.getElementById('tableBody');
