@@ -404,8 +404,8 @@
              h.includes('correo') || h.includes('email') || h.includes('seccion') || 
              h.includes('sección') || h.includes('grupo') || h.includes('total') || 
              h.includes('promedio') || h.includes('%') || h.includes('porcentaje') || 
-             h.includes('final') || h.includes('acumulado') || h.includes('estudiante') ||
-             h.includes('alumno') || h.includes('nombre');
+             h.includes('final') || h.includes('acumulado') || h.includes('sis') ||
+             h.includes('read only');
     }
 
     function processKiraCSV(text) {
@@ -421,7 +421,14 @@
       parsedRows = [];
       for (let i = 1; i < lines.length; i++) {
         const row = parseCSVLine(lines[i], delimiter);
-        if (row.length > 1) parsedRows.push(row);
+        if (row.length <= 1) continue;
+
+        const firstCol = (row[0] || '').toLowerCase().trim();
+        if (firstCol.includes('points possible') || firstCol.includes('puntos posibles') || firstCol.includes('read only')) {
+          continue; // Ignorar la fila de puntos posibles
+        }
+
+        parsedRows.push(row);
       }
 
       colDayMap = [];
@@ -430,7 +437,7 @@
 
       let nameIdx = parsedHeaders.findIndex(h => {
         const l = h.toLowerCase().trim();
-        return l.includes('estudiante') || l.includes('alumno') || l.includes('nombre');
+        return l.includes('estudiante') || l.includes('alumno') || l.includes('nombre') || l.includes('student');
       });
       if (nameIdx === -1) nameIdx = 0;
 
@@ -467,16 +474,12 @@
       if (!val) return 'faltan';
       const raw = val.trim().toLowerCase().replace(',', '.');
 
-      if (raw === '' || raw === '0' || raw === '0.00' || raw === '0.0' || raw === '-' || raw === '--' || raw === '0%' || raw === '0 %') {
+      if (raw === '' || raw === '0' || raw === '0.00' || raw === '0.0' || raw === '-' || raw === '--' || raw === '0%' || raw === '0 %' || raw.includes('sin entreg') || raw.includes('no entreg') || raw.includes('falta')) {
         return 'faltan';
       }
 
-      if (raw.includes('revis') || raw.includes('calif') || raw === 'p' || raw.includes('pend') || raw.includes('necesita')) {
+      if (raw.includes('revis') || raw.includes('calif') || raw === 'p' || raw.includes('pend') || raw.includes('necesita') || raw.includes('ex')) {
         return 'porCalificar';
-      }
-
-      if (raw.includes('sin entreg') || raw.includes('no entreg') || raw.includes('sin real') || raw.includes('incompleto') || raw.includes('falta') || raw.includes('n/a')) {
-        return 'faltan';
       }
 
       const numVal = parseFloat(raw);
@@ -484,8 +487,8 @@
         return 'hechas';
       }
 
-      if (raw.includes('complet') || raw.includes('entreg') || raw.includes('realiz') || raw.includes('hecho') || raw.includes('aprob')) {
-        return 'hechas';
+      if (raw.length > 0 && !raw.includes('unsubmitted') && !raw.includes('missing')) {
+        return 'porCalificar';
       }
 
       return 'faltan';
@@ -496,7 +499,7 @@
 
       let nameIndex = parsedHeaders.findIndex(h => {
         const l = h.toLowerCase().trim();
-        return l.includes('estudiante') || l.includes('alumno') || l.includes('nombre');
+        return l.includes('estudiante') || l.includes('alumno') || l.includes('nombre') || l.includes('student');
       });
       if (nameIndex === -1) nameIndex = 0;
 
@@ -557,13 +560,13 @@
         });
 
         const totalLessonsStudent = hechas + porCalificar + faltan;
-        const pct = totalLessonsStudent > 0 ? Math.round((hechas / totalLessonsStudent) * 100) : 0;
+        const pct = totalLessonsStudent > 0 ? Math.round(((hechas + porCalificar) / totalLessonsStudent) * 100) : 0;
 
         globalFaltan += faltan;
         globalHechas += hechas;
         globalPorCalificar += porCalificar;
 
-        const daysCompleted = totalLessonsStudent > 0 ? Math.round((hechas / totalLessonsStudent) * activeDaysSet.size) : 0;
+        const daysCompleted = totalLessonsStudent > 0 ? Math.round(((hechas + porCalificar) / totalLessonsStudent) * activeDaysSet.size) : 0;
 
         students.push({
           name: name,
@@ -576,7 +579,7 @@
       });
 
       const totalGlobal = globalHechas + globalPorCalificar + globalFaltan;
-      const avgPct = totalGlobal > 0 ? Math.round((globalHechas / totalGlobal) * 100) : 0;
+      const avgPct = totalGlobal > 0 ? Math.round(((globalHechas + globalPorCalificar) / totalGlobal) * 100) : 0;
 
       document.getElementById('fileInfoBar').innerHTML = 
         `<span>Archivo: <strong>${fileName}</strong> · <strong>${students.length}</strong> estudiantes · <strong>1739</strong> lecciones en 156 días</span>`;
