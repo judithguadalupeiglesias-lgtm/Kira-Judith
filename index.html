@@ -400,12 +400,17 @@
     function isMetadataHeader(headerText) {
       if (!headerText) return true;
       const h = headerText.toLowerCase().trim();
-      return h.includes('id') || h.includes('carnet') || h.includes('usuario') || 
-             h.includes('correo') || h.includes('email') || h.includes('seccion') || 
-             h.includes('sección') || h.includes('grupo') || h.includes('total') || 
-             h.includes('promedio') || h.includes('%') || h.includes('porcentaje') || 
-             h.includes('final') || h.includes('acumulado') || h.includes('sis') ||
-             h.includes('read only');
+
+      // Detección estricta por límite de palabras para no ignorar lecciones como "Actividad" o "Consolidación"
+      const isWordMatch = /\b(id|sis|carnet|seccion|sección|grupo|correo|email|usuario|student|estudiante|alumno|nombre)\b/i.test(h);
+      if (isWordMatch) return true;
+
+      const isSummaryScore = /\b(total|promedio|porcentaje|acumulado|final|score|points possible|puntos posibles|read only)\b/i.test(h);
+      const isLesson = /d[íi]a|clase|lecci[óo]n/i.test(h);
+
+      if (isSummaryScore && !isLesson) return true;
+
+      return false;
     }
 
     function processKiraCSV(text) {
@@ -425,7 +430,7 @@
 
         const firstCol = (row[0] || '').toLowerCase().trim();
         if (firstCol.includes('points possible') || firstCol.includes('puntos posibles') || firstCol.includes('read only')) {
-          continue; // Ignorar la fila de puntos posibles
+          continue;
         }
 
         parsedRows.push(row);
@@ -548,16 +553,35 @@
         let porCalificar = 0;
         let faltan = 0;
 
+        // Estructura para contar días completos por alumno
+        let dayStatusMap = {};
+
         lessonCols.forEach(colIndex => {
+          const dayNum = colDayMap[colIndex];
+          if (!dayStatusMap[dayNum]) {
+            dayStatusMap[dayNum] = { hechas: 0, faltan: 0, porCalificar: 0 };
+          }
+
           const status = classifyCellValue(row[colIndex]);
           if (status === 'porCalificar') {
             porCalificar++;
+            dayStatusMap[dayNum].porCalificar++;
           } else if (status === 'hechas') {
             hechas++;
+            dayStatusMap[dayNum].hechas++;
           } else {
             faltan++;
+            dayStatusMap[dayNum].faltan++;
           }
         });
+
+        // Contar días donde el alumno completó todas las lecciones del día sin faltas
+        let completeDaysCount = 0;
+        for (let d in dayStatusMap) {
+          if (dayStatusMap[d].faltan === 0 && (dayStatusMap[d].hechas > 0 || dayStatusMap[d].porCalificar > 0)) {
+            completeDaysCount++;
+          }
+        }
 
         const totalLessonsStudent = hechas + porCalificar + faltan;
         const pct = totalLessonsStudent > 0 ? Math.round(((hechas + porCalificar) / totalLessonsStudent) * 100) : 0;
@@ -566,15 +590,13 @@
         globalHechas += hechas;
         globalPorCalificar += porCalificar;
 
-        const daysCompleted = totalLessonsStudent > 0 ? Math.round(((hechas + porCalificar) / totalLessonsStudent) * activeDaysSet.size) : 0;
-
         students.push({
           name: name,
           pct: Math.min(pct, 100),
           hechas: hechas,
           porCalificar: porCalificar,
           faltan: faltan,
-          dias: `${daysCompleted} de ${activeDaysSet.size}`
+          dias: `${completeDaysCount} de ${activeDaysSet.size}`
         });
       });
 
