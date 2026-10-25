@@ -41,9 +41,6 @@
     header h1 {
       margin: 0;
       font-size: 1.3rem;
-      display: flex;
-      align-items: center;
-      gap: 10px;
     }
     .controls {
       display: flex;
@@ -63,9 +60,8 @@
     }
     .container {
       max-width: 800px;
-      margin: 40px auto;
+      margin: 30px auto;
       padding: 0 20px;
-      text-align: center;
     }
     .drop-zone {
       border: 2px dashed #3b82f6;
@@ -73,7 +69,11 @@
       padding: 40px 20px;
       background-color: var(--card-bg);
       cursor: pointer;
+      text-align: center;
       transition: background 0.3s;
+    }
+    .drop-zone:hover {
+      background-color: rgba(59, 130, 246, 0.05);
     }
     .drop-zone h2 {
       margin: 0 0 10px 0;
@@ -87,7 +87,54 @@
     input[type="file"] {
       display: none;
     }
+    .dashboard {
+      display: none;
+      margin-top: 20px;
+    }
+    .search-card, .results-card {
+      background-color: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 20px;
+      margin-bottom: 20px;
+    }
+    label {
+      display: block;
+      font-weight: bold;
+      margin-bottom: 8px;
+    }
+    input[type="text"] {
+      width: 100%;
+      padding: 10px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      box-sizing: border-box;
+      font-size: 1rem;
+      background-color: var(--card-bg);
+      color: var(--text);
+    }
+    .status-badge {
+      display: inline-block;
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-size: 0.85rem;
+      font-weight: bold;
+    }
+    .pending { background-color: #fef3c7; color: #92400e; }
+    ul.lesson-list {
+      list-style: none;
+      padding: 0;
+      margin: 15px 0 0 0;
+    }
+    ul.lesson-list li {
+      padding: 10px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
     footer {
+      text-align: center;
       margin-top: 30px;
       color: #ef4444;
       font-weight: bold;
@@ -106,10 +153,22 @@
   </header>
 
   <div class="container">
-    <div class="drop-zone" onclick="document.getElementById('fileInput').click()">
-      <h2>Haga clic aquí para elegir el archivo CSV</h2>
-      <p>o arrástrelo hasta este recuadro. Debe ser el reporte "Gradebook ... Points" de Lenguaje.</p>
+    <div class="drop-zone" id="dropZone" onclick="document.getElementById('fileInput').click()">
+      <h2 id="dropTitle">Haga clic aquí para elegir el archivo CSV</h2>
+      <p id="dropDesc">o arrástrelo hasta este recuadro. Debe ser el reporte "Gradebook ... Points".</p>
       <input type="file" id="fileInput" accept=".csv">
+    </div>
+
+    <div class="dashboard" id="dashboard">
+      <div class="search-card">
+        <label for="studentSearch">Selecciona o busca un estudiante:</label>
+        <input type="text" id="studentSearch" placeholder="Escribe el nombre del alumno..." list="studentList" oninput="showStudentLessons()">
+        <datalist id="studentList"></datalist>
+      </div>
+
+      <div class="results-card" id="resultsCard">
+        👉 Ingresa o selecciona un nombre para revisar sus lecciones.
+      </div>
     </div>
 
     <footer>
@@ -119,12 +178,149 @@
 
   <script>
     let currentFontSize = 16;
+    let gradebookData = {};
+
     function changeFontSize(delta) {
       currentFontSize += delta;
       document.body.style.fontSize = currentFontSize + 'px';
     }
+
     function toggleDarkMode() {
       document.body.classList.toggle('dark');
+    }
+
+    const fileInput = document.getElementById('fileInput');
+    const dropZone = document.getElementById('dropZone');
+
+    dropZone.addEventListener('dragover', (e) => {
+      e.preventDefault();
+    });
+
+    dropZone.addEventListener('drop', (e) => {
+      e.preventDefault();
+      if (e.dataTransfer.files.length) {
+        handleFile(e.dataTransfer.files[0]);
+      }
+    });
+
+    fileInput.addEventListener('change', (e) => {
+      if (e.target.files.length) {
+        handleFile(e.target.files[0]);
+      }
+    });
+
+    function handleFile(file) {
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        parseCSV(e.target.result);
+      };
+      reader.readAsText(file);
+    }
+
+    function parseCSV(text) {
+      const lines = text.split(/\r\n|\n/);
+      if (lines.length < 2) return;
+
+      const delimiter = lines[0].includes(';') ? ';' : ',';
+      const headers = parseCSVLine(lines[0], delimiter);
+
+      let nameColIndex = headers.findIndex(h => 
+        h.toLowerCase().includes('estudiante') || 
+        h.toLowerCase().includes('alumno') || 
+        h.toLowerCase().includes('student') || 
+        h.toLowerCase().includes('nombre')
+      );
+
+      if (nameColIndex === -1) nameColIndex = 0;
+
+      gradebookData = {};
+      const studentNames = [];
+
+      for (let i = 1; i < lines.length; i++) {
+        if (!lines[i].trim()) continue;
+        const row = parseCSVLine(lines[i], delimiter);
+        const studentName = row[nameColIndex]?.trim();
+
+        if (!studentName) continue;
+
+        if (!gradebookData[studentName]) {
+          gradebookData[studentName] = [];
+          studentNames.push(studentName);
+        }
+
+        for (let j = 0; j < headers.length; j++) {
+          if (j === nameColIndex) continue;
+          const lessonName = headers[j]?.trim();
+          const val = row[j]?.trim() || '';
+
+          if (lessonName) {
+            const isPending = val === '' || val === '-' || val === '0' || val.toLowerCase().includes('pendiente') || val.toLowerCase().includes('incompleto');
+            if (isPending) {
+              gradebookData[studentName].push({
+                lesson: lessonName,
+                score: val || 'Pendiente'
+              });
+            }
+          }
+        }
+      }
+
+      const datalist = document.getElementById('studentList');
+      datalist.innerHTML = '';
+      studentNames.sort().forEach(name => {
+        const opt = document.createElement('option');
+        opt.value = name;
+        datalist.appendChild(opt);
+      });
+
+      document.getElementById('dashboard').style.display = 'block';
+      document.getElementById('dropTitle').innerText = '✅ Archivo cargado correctamente';
+      document.getElementById('dropDesc').innerText = 'Haz clic aquí si deseas cambiar por otro reporte CSV.';
+    }
+
+    function parseCSVLine(text, delimiter) {
+      const result = [];
+      let cell = '';
+      let inQuotes = false;
+      for (let i = 0; i < text.length; i++) {
+        const c = text[i];
+        if (c === '"') {
+          inQuotes = !inQuotes;
+        } else if (c === delimiter && !inQuotes) {
+          result.push(cell.replace(/^"|"$/g, '').trim());
+          cell = '';
+        } else {
+          cell += c;
+        }
+      }
+      result.push(cell.replace(/^"|"$/g, '').trim());
+      return result;
+    }
+
+    function showStudentLessons() {
+      const name = document.getElementById('studentSearch').value.trim();
+      const resultsCard = document.getElementById('resultsCard');
+
+      if (!name || !gradebookData[name]) {
+        resultsCard.innerHTML = '👉 Ingresa o selecciona un nombre para revisar sus lecciones.';
+        return;
+      }
+
+      const pendingLessons = gradebookData[name];
+
+      let html = `<h3>📚 Alumno: ${name}</h3>`;
+
+      if (pendingLessons.length === 0) {
+        html += `<p style="color: #059669; font-weight: bold;">🎉 ¡Excelente! No tiene lecciones pendientes.</p>`;
+      } else {
+        html += `<p><strong>Lecciones pendientes (${pendingLessons.length}):</strong></p><ul class="lesson-list">`;
+        pendingLessons.forEach(l => {
+          html += `<li><span>${l.lesson}</span> <span class="status-badge pending">${l.score}</span></li>`;
+        });
+        html += `</ul>`;
+      }
+
+      resultsCard.innerHTML = html;
     }
   </script>
 
