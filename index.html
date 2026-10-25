@@ -225,8 +225,17 @@
     footer {
       text-align: center;
       margin-top: 40px;
+      padding-bottom: 20px;
       color: #ef4444;
       font-weight: bold;
+    }
+    .footer-logo {
+      max-width: 90px;
+      height: auto;
+      display: block;
+      margin: 0 auto 8px auto;
+      border-radius: 50%;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
     }
   </style>
 </head>
@@ -307,7 +316,8 @@
     </div>
 
     <footer>
-      @licdajudith
+      <img src="logo.jpeg" alt="Aprendiendo con la Maestra Judith" class="footer-logo">
+      <div>@licdajudith</div>
     </footer>
   </div>
 
@@ -387,13 +397,11 @@
       const dayEnd = parseInt(document.getElementById('dayEnd').value) || 115;
       const chkOnlyWork = document.getElementById('chkOnlyWork').checked;
 
-      // Identify valid activity columns (1 lesson unit per column)
       let lessonCols = [];
       for (let j = 0; j < parsedHeaders.length; j++) {
         if (j === nameIndex) continue;
         const h = parsedHeaders[j].toLowerCase().trim();
 
-        // Skip metadata, IDs, or summary columns
         if (h.includes('id') || h.includes('carnet') || h.includes('usuario') || 
             h.includes('correo') || h.includes('email') || h.includes('seccion') || 
             h.includes('sección') || h.includes('grupo') || h.includes('total') || 
@@ -530,3 +538,4 @@
 
 </body>
 </html>
+    
