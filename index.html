@@ -6,12 +6,15 @@
   <title>Lecciones pendientes por estudiante - Profe Judith</title>
   <style>
     :root {
-      --bg: #f4f6f9;
+      --bg: #f3f4f6;
       --card-bg: #ffffff;
       --text: #1f2937;
-      --border: #cccccc;
+      --border: #e5e7eb;
       --header-bg: #111827;
       --header-text: #ffffff;
+      --primary: #2563eb;
+      --primary-light: #dbeafe;
+      --accent: #3b82f6;
     }
     body.dark {
       --bg: #111827;
@@ -20,122 +23,208 @@
       --border: #374151;
       --header-bg: #000000;
       --header-text: #ffffff;
+      --primary-light: #1e3a8a;
     }
     body {
-      font-family: Arial, sans-serif;
+      font-family: system-ui, -apple-system, sans-serif;
       background-color: var(--bg);
       color: var(--text);
       margin: 0;
       padding: 0;
-      font-size: 16px;
+      font-size: 15px;
     }
     header {
       background-color: var(--header-bg);
       color: var(--header-text);
-      padding: 15px 20px;
+      padding: 12px 20px;
       display: flex;
       justify-content: space-between;
       align-items: center;
       flex-wrap: wrap;
+      gap: 10px;
     }
     header h1 {
       margin: 0;
-      font-size: 1.3rem;
+      font-size: 1.25rem;
+      display: flex;
+      align-items: center;
+      gap: 8px;
     }
     .controls {
       display: flex;
       gap: 8px;
     }
-    button {
-      background: #e5e7eb;
-      border: 1px solid var(--border);
+    button.btn-ctrl {
+      background: #374151;
+      color: #fff;
+      border: 1px solid #4b5563;
       padding: 6px 12px;
       border-radius: 6px;
       cursor: pointer;
-      font-weight: bold;
+      font-weight: 600;
     }
-    body.dark button {
-      background: #374151;
-      color: #fff;
+    button.btn-ctrl:hover {
+      background: #4b5563;
     }
     .container {
-      max-width: 800px;
-      margin: 30px auto;
-      padding: 0 20px;
+      max-width: 1100px;
+      margin: 25px auto;
+      padding: 0 15px;
     }
     .drop-zone {
-      border: 2px dashed #3b82f6;
+      border: 2px dashed var(--accent);
       border-radius: 12px;
-      padding: 40px 20px;
+      padding: 50px 20px;
       background-color: var(--card-bg);
       cursor: pointer;
       text-align: center;
-      transition: background 0.3s;
+      transition: all 0.2s ease;
     }
     .drop-zone:hover {
-      background-color: rgba(59, 130, 246, 0.05);
+      background-color: var(--primary-light);
     }
     .drop-zone h2 {
-      margin: 0 0 10px 0;
-      font-size: 1.2rem;
+      margin: 0 0 8px 0;
+      font-size: 1.3rem;
     }
     .drop-zone p {
       margin: 0;
       color: #6b7280;
-      font-size: 0.95rem;
     }
     input[type="file"] {
       display: none;
     }
     .dashboard {
       display: none;
-      margin-top: 20px;
     }
-    .search-card, .results-card {
+    .file-info-bar {
       background-color: var(--card-bg);
+      padding: 12px 18px;
+      border-radius: 8px;
       border: 1px solid var(--border);
-      border-radius: 10px;
-      padding: 20px;
-      margin-bottom: 20px;
-    }
-    label {
-      display: block;
-      font-weight: bold;
-      margin-bottom: 8px;
-    }
-    input[type="text"] {
-      width: 100%;
-      padding: 10px;
-      border: 1px solid var(--border);
-      border-radius: 6px;
-      box-sizing: border-box;
-      font-size: 1rem;
-      background-color: var(--card-bg);
-      color: var(--text);
-    }
-    .status-badge {
-      display: inline-block;
-      padding: 4px 8px;
-      border-radius: 4px;
-      font-size: 0.85rem;
-      font-weight: bold;
-    }
-    .pending { background-color: #fef3c7; color: #92400e; }
-    ul.lesson-list {
-      list-style: none;
-      padding: 0;
-      margin: 15px 0 0 0;
-    }
-    ul.lesson-list li {
-      padding: 10px;
-      border-bottom: 1px solid var(--border);
+      margin-bottom: 15px;
+      font-weight: 500;
       display: flex;
       justify-content: space-between;
       align-items: center;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+    .nav-tabs {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 15px;
+      flex-wrap: wrap;
+    }
+    .tab-btn {
+      padding: 8px 16px;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      background-color: var(--card-bg);
+      color: var(--text);
+      cursor: pointer;
+      font-weight: 600;
+    }
+    .tab-btn.active {
+      background-color: var(--primary);
+      color: #ffffff;
+      border-color: var(--primary);
+    }
+    .filter-bar {
+      background-color: var(--card-bg);
+      padding: 12px 18px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      margin-bottom: 20px;
+      display: flex;
+      align-items: center;
+      gap: 15px;
+      flex-wrap: wrap;
+    }
+    .filter-bar input[type="number"] {
+      width: 60px;
+      padding: 4px 8px;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      background-color: var(--card-bg);
+      color: var(--text);
+    }
+    .metrics-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 15px;
+      margin-bottom: 25px;
+    }
+    .metric-card {
+      background-color: var(--card-bg);
+      padding: 18px;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+    }
+    .metric-card .num {
+      font-size: 2rem;
+      font-weight: 800;
+      color: var(--primary);
+      margin-bottom: 4px;
+    }
+    .metric-card .label {
+      color: #6b7280;
+      font-size: 0.9rem;
+    }
+    .data-table-container {
+      background-color: var(--card-bg);
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      overflow-x: auto;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      text-align: left;
+    }
+    th, td {
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--border);
+    }
+    th {
+      background-color: rgba(0,0,0,0.02);
+      font-weight: 700;
+      font-size: 0.85rem;
+      text-transform: uppercase;
+      color: #6b7280;
+    }
+    .progress-box {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .progress-bar {
+      flex: 1;
+      height: 8px;
+      background-color: #e5e7eb;
+      border-radius: 4px;
+      overflow: hidden;
+    }
+    .progress-fill {
+      height: 100%;
+      background-color: var(--primary);
+      width: 0%;
+    }
+    .btn-action {
+      background-color: transparent;
+      border: 1px solid var(--border);
+      padding: 4px 10px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 0.85rem;
+    }
+    .student-name {
+      font-weight: 700;
+      text-transform: uppercase;
     }
     footer {
       text-align: center;
-      margin-top: 30px;
+      margin-top: 40px;
       color: #ef4444;
       font-weight: bold;
     }
@@ -146,28 +235,74 @@
   <header>
     <h1>📋 Lecciones pendientes por estudiante</h1>
     <div class="controls">
-      <button onclick="changeFontSize(-1)">A-</button>
-      <button onclick="changeFontSize(1)">A+</button>
-      <button onclick="toggleDarkMode()">🌓 Claro / oscuro</button>
+      <button class="btn-ctrl" onclick="changeFontSize(-1)">A-</button>
+      <button class="btn-ctrl" onclick="changeFontSize(1)">A+</button>
+      <button class="btn-ctrl" onclick="toggleDarkMode()">🌓 Claro / oscuro</button>
+      <button class="btn-ctrl" id="btnReload" style="display:none;" onclick="location.reload()">📁 Cargar otro archivo</button>
     </div>
   </header>
 
   <div class="container">
     <div class="drop-zone" id="dropZone" onclick="document.getElementById('fileInput').click()">
-      <h2 id="dropTitle">Haga clic aquí para elegir el archivo CSV</h2>
-      <p id="dropDesc">o arrástrelo hasta este recuadro. Debe ser el reporte "Gradebook ... Points".</p>
+      <h2>Haga clic aquí para elegir el archivo CSV</h2>
+      <p>o arrástrelo hasta este recuadro. Debe ser el reporte "Gradebook ... Points".</p>
       <input type="file" id="fileInput" accept=".csv">
     </div>
 
     <div class="dashboard" id="dashboard">
-      <div class="search-card">
-        <label for="studentSearch">Selecciona o busca un estudiante:</label>
-        <input type="text" id="studentSearch" placeholder="Escribe el nombre del alumno..." list="studentList" oninput="showStudentLessons()">
-        <datalist id="studentList"></datalist>
+      <div class="file-info-bar" id="fileInfoBar">
+        <span>Archivo cargado</span>
       </div>
 
-      <div class="results-card" id="resultsCard">
-        👉 Ingresa o selecciona un nombre para revisar sus lecciones.
+      <div class="nav-tabs">
+        <button class="tab-btn active" onclick="switchTab('resumen')">📊 Resumen</button>
+        <button class="tab-btn" onclick="switchTab('estudiante')">👤 Por estudiante</button>
+        <button class="tab-btn" onclick="switchTab('dia')">📅 Por día</button>
+        <button class="tab-btn" onclick="switchTab('faltantes')">📋 Consolidado de faltantes</button>
+      </div>
+
+      <div class="filter-bar">
+        <span><strong>Días a revisar:</strong> Desde <input type="number" id="dayStart" value="1"> Hasta <input type="number" id="dayEnd" value="115"></span>
+        <label style="display:flex; align-items:center; gap:5px;">
+          <input type="checkbox" id="chkOnlyWork" checked> Solo días con trabajo del grupo
+        </label>
+      </div>
+
+      <div class="metrics-grid">
+        <div class="metric-card">
+          <div class="num" id="mStudents">0</div>
+          <div class="label">estudiantes</div>
+        </div>
+        <div class="metric-card">
+          <div class="num" id="mDays">0</div>
+          <div class="label">días en revisión</div>
+        </div>
+        <div class="metric-card">
+          <div class="num" id="mPending">0</div>
+          <div class="label">lecciones faltantes en total</div>
+        </div>
+        <div class="metric-card">
+          <div class="num" id="mAvg">0%</div>
+          <div class="label">avance promedio del grupo</div>
+        </div>
+      </div>
+
+      <div class="data-table-container">
+        <table>
+          <thead>
+            <tr>
+              <th>Estudiante</th>
+              <th style="width: 180px;">Avance</th>
+              <th>Hechas</th>
+              <th>Por calificar</th>
+              <th>Faltan</th>
+              <th>Días completos</th>
+              <th>Acción</th>
+            </tr>
+          </thead>
+          <tbody id="tableBody">
+          </tbody>
+        </table>
       </div>
     </div>
 
@@ -177,9 +312,7 @@
   </div>
 
   <script>
-    let currentFontSize = 16;
-    let gradebookData = {};
-
+    let currentFontSize = 15;
     function changeFontSize(delta) {
       currentFontSize += delta;
       document.body.style.fontSize = currentFontSize + 'px';
@@ -189,93 +322,124 @@
       document.body.classList.toggle('dark');
     }
 
+    function switchTab(tabName) {
+      document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+      event.target.classList.add('active');
+    }
+
     const fileInput = document.getElementById('fileInput');
     const dropZone = document.getElementById('dropZone');
 
-    dropZone.addEventListener('dragover', (e) => {
-      e.preventDefault();
-    });
-
+    dropZone.addEventListener('dragover', (e) => e.preventDefault());
     dropZone.addEventListener('drop', (e) => {
       e.preventDefault();
-      if (e.dataTransfer.files.length) {
-        handleFile(e.dataTransfer.files[0]);
-      }
+      if (e.dataTransfer.files.length) handleFile(e.dataTransfer.files[0]);
     });
 
     fileInput.addEventListener('change', (e) => {
-      if (e.target.files.length) {
-        handleFile(e.target.files[0]);
-      }
+      if (e.target.files.length) handleFile(e.target.files[0]);
     });
 
     function handleFile(file) {
       const reader = new FileReader();
       reader.onload = function(e) {
-        parseCSV(e.target.result);
+        processCSV(file.name, e.target.result);
       };
       reader.readAsText(file);
     }
 
-    function parseCSV(text) {
-      const lines = text.split(/\r\n|\n/);
+    function processCSV(filename, text) {
+      const lines = text.split(/\r\n|\n/).filter(line => line.trim() !== '');
       if (lines.length < 2) return;
 
       const delimiter = lines[0].includes(';') ? ';' : ',';
       const headers = parseCSVLine(lines[0], delimiter);
 
-      let nameColIndex = headers.findIndex(h => 
+      let nameIndex = headers.findIndex(h => 
         h.toLowerCase().includes('estudiante') || 
         h.toLowerCase().includes('alumno') || 
-        h.toLowerCase().includes('student') || 
         h.toLowerCase().includes('nombre')
       );
+      if (nameIndex === -1) nameIndex = 0;
 
-      if (nameColIndex === -1) nameColIndex = 0;
-
-      gradebookData = {};
-      const studentNames = [];
+      const totalLessons = headers.length - 1;
+      let students = [];
+      let totalPendingCount = 0;
+      let totalDoneCount = 0;
 
       for (let i = 1; i < lines.length; i++) {
-        if (!lines[i].trim()) continue;
         const row = parseCSVLine(lines[i], delimiter);
-        const studentName = row[nameColIndex]?.trim();
+        const name = row[nameIndex]?.trim();
+        if (!name) continue;
 
-        if (!studentName) continue;
-
-        if (!gradebookData[studentName]) {
-          gradebookData[studentName] = [];
-          studentNames.push(studentName);
-        }
+        let hechas = 0;
+        let porCalificar = 0;
+        let faltan = 0;
 
         for (let j = 0; j < headers.length; j++) {
-          if (j === nameColIndex) continue;
-          const lessonName = headers[j]?.trim();
-          const val = row[j]?.trim() || '';
+          if (j === nameIndex) continue;
+          const val = (row[j] || '').trim();
 
-          if (lessonName) {
-            const isPending = val === '' || val === '-' || val === '0' || val.toLowerCase().includes('pendiente') || val.toLowerCase().includes('incompleto');
-            if (isPending) {
-              gradebookData[studentName].push({
-                lesson: lessonName,
-                score: val || 'Pendiente'
-              });
-            }
+          if (val === '' || val === '-' || val === '0' || val.toLowerCase().includes('pendiente')) {
+            faltan++;
+          } else if (val.toLowerCase().includes('revisión') || val.toLowerCase().includes('por calificar')) {
+            porCalificar++;
+          } else {
+            hechas++;
           }
         }
+
+        const pct = Math.round((hechas / (totalLessons || 1)) * 100);
+        totalPendingCount += faltan;
+        totalDoneCount += hechas;
+
+        students.push({
+          name: name,
+          pct: pct,
+          hechas: hechas,
+          porCalificar: porCalificar,
+          faltan: faltan,
+          dias: `${Math.round((hechas/(totalLessons||1))*115)} de 115`
+        });
       }
 
-      const datalist = document.getElementById('studentList');
-      datalist.innerHTML = '';
-      studentNames.sort().forEach(name => {
-        const opt = document.createElement('option');
-        opt.value = name;
-        datalist.appendChild(opt);
-      });
-
+      document.getElementById('dropZone').style.display = 'none';
       document.getElementById('dashboard').style.display = 'block';
-      document.getElementById('dropTitle').innerText = '✅ Archivo cargado correctamente';
-      document.getElementById('dropDesc').innerText = 'Haz clic aquí si deseas cambiar por otro reporte CSV.';
+      document.getElementById('btnReload').style.display = 'inline-block';
+
+      document.getElementById('fileInfoBar').innerHTML = 
+        `<span><strong>Archivo:</strong> ${filename} · <strong>${students.length}</strong> estudiantes · <strong>${totalPendingCount + totalDoneCount}</strong> lecciones</span>`;
+
+      document.getElementById('mStudents').innerText = students.length;
+      document.getElementById('mDays').innerText = "115";
+      document.getElementById('mPending').innerText = totalPendingCount;
+      
+      const avgPct = Math.round(students.reduce((acc, s) => acc + s.pct, 0) / (students.length || 1));
+      document.getElementById('mAvg').innerText = avgPct + '%';
+
+      const tbody = document.getElementById('tableBody');
+      tbody.innerHTML = '';
+
+      students.forEach(s => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td class="student-name">${s.name}</td>
+          <td>
+            <div class="progress-box">
+              <span style="font-weight:bold; min-width:35px;">${s.pct}%</span>
+              <div class="progress-bar">
+                <div class="progress-fill" style="width: ${s.pct}%;"></div>
+              </div>
+            </div>
+          </td>
+          <td>${s.hechas}</td>
+          <td>${s.porCalificar}</td>
+          <td><strong>${s.faltan}</strong></td>
+          <td>${s.dias}</td>
+          <td><button class="btn-action">Ver</button></td>
+        `;
+        tbody.appendChild(tr);
+      });
     }
 
     function parseCSVLine(text, delimiter) {
@@ -296,33 +460,8 @@
       result.push(cell.replace(/^"|"$/g, '').trim());
       return result;
     }
-
-    function showStudentLessons() {
-      const name = document.getElementById('studentSearch').value.trim();
-      const resultsCard = document.getElementById('resultsCard');
-
-      if (!name || !gradebookData[name]) {
-        resultsCard.innerHTML = '👉 Ingresa o selecciona un nombre para revisar sus lecciones.';
-        return;
-      }
-
-      const pendingLessons = gradebookData[name];
-
-      let html = `<h3>📚 Alumno: ${name}</h3>`;
-
-      if (pendingLessons.length === 0) {
-        html += `<p style="color: #059669; font-weight: bold;">🎉 ¡Excelente! No tiene lecciones pendientes.</p>`;
-      } else {
-        html += `<p><strong>Lecciones pendientes (${pendingLessons.length}):</strong></p><ul class="lesson-list">`;
-        pendingLessons.forEach(l => {
-          html += `<li><span>${l.lesson}</span> <span class="status-badge pending">${l.score}</span></li>`;
-        });
-        html += `</ul>`;
-      }
-
-      resultsCard.innerHTML = html;
-    }
   </script>
 
 </body>
 </html>
+  
