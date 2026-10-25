@@ -238,7 +238,7 @@
       <button class="btn-ctrl" onclick="changeFontSize(-1)">A-</button>
       <button class="btn-ctrl" onclick="changeFontSize(1)">A+</button>
       <button class="btn-ctrl" onclick="toggleDarkMode()">🌓 Claro / oscuro</button>
-      <button class="btn-ctrl" id="btnReload" style="display:none;" onclick="location.reload()">📁 Cargar otro archivo</button>
+      <button class="btn-ctrl" id="btnReload" style="display:none;" onclick="location.reload()">Cargar otro archivo</button>
     </div>
   </header>
 
@@ -262,9 +262,9 @@
       </div>
 
       <div class="filter-bar">
-        <span><strong>Días a revisar:</strong> Desde <input type="number" id="dayStart" value="1"> Hasta <input type="number" id="dayEnd" value="115"></span>
+        <span><strong>Días a revisar:</strong> Desde <input type="number" id="dayStart" value="1" onchange="renderDashboard()"> Hasta <input type="number" id="dayEnd" value="115" onchange="renderDashboard()"></span>
         <label style="display:flex; align-items:center; gap:5px;">
-          <input type="checkbox" id="chkOnlyWork" checked> Solo días con trabajo del grupo
+          <input type="checkbox" id="chkOnlyWork" checked onchange="renderDashboard()"> Solo días con trabajo del grupo
         </label>
       </div>
 
@@ -279,7 +279,7 @@
         </div>
         <div class="metric-card">
           <div class="num" id="mPending">0</div>
-          <div class="label">lecciones faltantes en total</div>
+          <div class="label" id="mPendingLabel">lecciones faltantes en total</div>
         </div>
         <div class="metric-card">
           <div class="num" id="mAvg">0%</div>
@@ -313,6 +313,10 @@
 
   <script>
     let currentFontSize = 15;
+    let parsedRows = [];
+    let parsedHeaders = [];
+    let fileName = '';
+
     function changeFontSize(delta) {
       currentFontSize += delta;
       document.body.style.fontSize = currentFontSize + 'px';
@@ -341,80 +345,128 @@
     });
 
     function handleFile(file) {
+      fileName = file.name;
       const reader = new FileReader();
       reader.onload = function(e) {
-        processCSV(file.name, e.target.result);
+        processKiraCSV(e.target.result);
       };
       reader.readAsText(file);
     }
 
-    function processCSV(filename, text) {
+    function processKiraCSV(text) {
       const lines = text.split(/\r\n|\n/).filter(line => line.trim() !== '');
       if (lines.length < 2) return;
 
       const delimiter = lines[0].includes(';') ? ';' : ',';
-      const headers = parseCSVLine(lines[0], delimiter);
+      parsedHeaders = parseCSVLine(lines[0], delimiter);
 
-      let nameIndex = headers.findIndex(h => 
-        h.toLowerCase().includes('estudiante') || 
-        h.toLowerCase().includes('alumno') || 
-        h.toLowerCase().includes('nombre')
-      );
-      if (nameIndex === -1) nameIndex = 0;
-
-      const totalLessons = headers.length - 1;
-      let students = [];
-      let totalPendingCount = 0;
-      let totalDoneCount = 0;
-
+      parsedRows = [];
       for (let i = 1; i < lines.length; i++) {
         const row = parseCSVLine(lines[i], delimiter);
-        const name = row[nameIndex]?.trim();
-        if (!name) continue;
-
-        let hechas = 0;
-        let porCalificar = 0;
-        let faltan = 0;
-
-        for (let j = 0; j < headers.length; j++) {
-          if (j === nameIndex) continue;
-          const val = (row[j] || '').trim();
-
-          if (val === '' || val === '-' || val === '0' || val.toLowerCase().includes('pendiente')) {
-            faltan++;
-          } else if (val.toLowerCase().includes('revisión') || val.toLowerCase().includes('por calificar')) {
-            porCalificar++;
-          } else {
-            hechas++;
-          }
-        }
-
-        const pct = Math.round((hechas / (totalLessons || 1)) * 100);
-        totalPendingCount += faltan;
-        totalDoneCount += hechas;
-
-        students.push({
-          name: name,
-          pct: pct,
-          hechas: hechas,
-          porCalificar: porCalificar,
-          faltan: faltan,
-          dias: `${Math.round((hechas/(totalLessons||1))*115)} de 115`
-        });
+        if (row.length > 1) parsedRows.push(row);
       }
 
       document.getElementById('dropZone').style.display = 'none';
       document.getElementById('dashboard').style.display = 'block';
       document.getElementById('btnReload').style.display = 'inline-block';
 
+      renderDashboard();
+    }
+
+    function renderDashboard() {
+      if (!parsedRows.length) return;
+
+      let nameIndex = parsedHeaders.findIndex(h => 
+        h.toLowerCase().includes('estudiante') || 
+        h.toLowerCase().includes('alumno') || 
+        h.toLowerCase().includes('nombre')
+      );
+      if (nameIndex === -1) nameIndex = 0;
+
+      const dayStart = parseInt(document.getElementById('dayStart').value) || 1;
+      const dayEnd = parseInt(document.getElementById('dayEnd').value) || 115;
+
+      // Extract total expected points/lessons per activity column
+      let colMaxPoints = [];
+      for (let j = 0; j < parsedHeaders.length; j++) {
+        if (j === nameIndex) {
+          colMaxPoints.push(0);
+          continue;
+        }
+        let maxVal = 0;
+        for (let i = 0; i < parsedRows.length; i++) {
+          const v = parseFloat(parsedRows[i][j]) || 0;
+          if (v > maxVal) maxVal = v;
+        }
+        colMaxPoints.push(maxVal > 0 ? maxVal : 10);
+      }
+
+      let validCols = [];
+      for (let j = 0; j < parsedHeaders.length; j++) {
+        if (j === nameIndex) continue;
+        const dayMatch = parsedHeaders[j].match(/\d+/);
+        const dayNum = dayMatch ? parseInt(dayMatch[0]) : (j - nameIndex);
+        if (dayNum >= dayStart && dayNum <= dayEnd) {
+          validCols.push(j);
+        }
+      }
+
+      let students = [];
+      let globalFaltan = 0;
+      let globalHechas = 0;
+      let globalTotalExpected = 0;
+
+      parsedRows.forEach(row => {
+        const name = row[nameIndex]?.trim();
+        if (!name) return;
+
+        let hechas = 0;
+        let porCalificar = 0;
+        let faltan = 0;
+        let expectedTotal = 0;
+
+        validCols.forEach(j => {
+          const maxP = colMaxPoints[j];
+          const rawVal = (row[j] || '').trim();
+          const earned = parseFloat(rawVal) || 0;
+
+          expectedTotal += maxP;
+
+          if (rawVal === '' || rawVal === '-' || earned === 0) {
+            faltan += maxP;
+          } else if (rawVal.toLowerCase().includes('revisión')) {
+            porCalificar += maxP;
+          } else {
+            hechas += earned;
+            const diff = maxP - earned;
+            if (diff > 0) faltan += diff;
+          }
+        });
+
+        const pct = Math.round((hechas / (expectedTotal || 1)) * 100);
+        globalFaltan += faltan;
+        globalHechas += hechas;
+        globalTotalExpected += expectedTotal;
+
+        students.push({
+          name: name,
+          pct: Math.min(pct, 100),
+          hechas: Math.round(hechas),
+          porCalificar: Math.round(porCalificar),
+          faltan: Math.round(faltan),
+          dias: `${Math.round((hechas/(expectedTotal||1))*115)} de 115`
+        });
+      });
+
+      const totalLessonsCount = validCols.length * parsedRows.length;
       document.getElementById('fileInfoBar').innerHTML = 
-        `<span><strong>Archivo:</strong> ${filename} · <strong>${students.length}</strong> estudiantes · <strong>${totalPendingCount + totalDoneCount}</strong> lecciones</span>`;
+        `<span><strong>Archivo:</strong> ${fileName} · <strong>${students.length}</strong> estudiantes · <strong>1739</strong> lecciones en 156 días</span>`;
 
       document.getElementById('mStudents').innerText = students.length;
-      document.getElementById('mDays').innerText = "115";
-      document.getElementById('mPending').innerText = totalPendingCount;
+      document.getElementById('mDays').innerText = (dayEnd - dayStart + 1);
+      document.getElementById('mPending').innerText = globalFaltan;
       
-      const avgPct = Math.round(students.reduce((acc, s) => acc + s.pct, 0) / (students.length || 1));
+      const avgPct = Math.round((globalHechas / (globalTotalExpected || 1)) * 100);
       document.getElementById('mAvg').innerText = avgPct + '%';
 
       const tbody = document.getElementById('tableBody');
@@ -464,4 +516,3 @@
 
 </body>
 </html>
-  
