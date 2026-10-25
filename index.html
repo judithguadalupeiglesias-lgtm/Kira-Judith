@@ -142,7 +142,7 @@
       flex-wrap: wrap;
     }
     .filter-bar input[type="number"] {
-      width: 60px;
+      width: 65px;
       padding: 4px 8px;
       border: 1px solid var(--border);
       border-radius: 4px;
@@ -275,6 +275,7 @@
         <label style="display:flex; align-items:center; gap:5px;">
           <input type="checkbox" id="chkOnlyWork" checked onchange="renderDashboard()"> Solo días con trabajo del grupo
         </label>
+        <span id="showingDaysText" style="color: #6b7280; font-weight: 500;">Mostrando 115 de 156 días</span>
       </div>
 
       <div class="metrics-grid">
@@ -326,6 +327,8 @@
     let parsedRows = [];
     let parsedHeaders = [];
     let fileName = '';
+    let colDayMap = [];
+    let maxDetectedDay = 156;
 
     function changeFontSize(delta) {
       currentFontSize += delta;
@@ -376,6 +379,45 @@
         if (row.length > 1) parsedRows.push(row);
       }
 
+      colDayMap = [];
+      let currentDay = 1;
+      let maxDayFound = 1;
+
+      let nameIdx = parsedHeaders.findIndex(h => {
+        const l = h.toLowerCase().trim();
+        return l.includes('estudiante') || l.includes('alumno') || l.includes('nombre');
+      });
+      if (nameIdx === -1) nameIdx = 0;
+
+      for (let j = 0; j < parsedHeaders.length; j++) {
+        if (j === nameIdx) {
+          colDayMap[j] = 0;
+          continue;
+        }
+
+        const h = parsedHeaders[j].toLowerCase().trim();
+        if (h.includes('id') || h.includes('carnet') || h.includes('usuario') || 
+            h.includes('correo') || h.includes('email') || h.includes('seccion') || 
+            h.includes('sección') || h.includes('grupo') || h.includes('total') || 
+            h.includes('promedio') || h.includes('%') || h.includes('porcentaje') || 
+            h.includes('final') || h.includes('acumulado')) {
+          colDayMap[j] = -1;
+          continue;
+        }
+
+        const matchDia = parsedHeaders[j].match(/d[íi]a\s*(\d+)/i) || 
+                         parsedHeaders[j].match(/\bd(\d+)\b/i);
+
+        if (matchDia) {
+          currentDay = parseInt(matchDia[1], 10);
+        }
+
+        colDayMap[j] = currentDay;
+        if (currentDay > maxDayFound) maxDayFound = currentDay;
+      }
+
+      maxDetectedDay = maxDayFound > 1 ? maxDayFound : 156;
+
       document.getElementById('dropZone').style.display = 'none';
       document.getElementById('dashboard').style.display = 'block';
       document.getElementById('btnReload').style.display = 'inline-block';
@@ -387,8 +429,8 @@
       if (!parsedRows.length) return;
 
       let nameIndex = parsedHeaders.findIndex(h => {
-        const lower = h.toLowerCase().trim();
-        return lower.includes('estudiante') || lower.includes('alumno') || lower.includes('nombre');
+        const l = h.toLowerCase().trim();
+        return l.includes('estudiante') || l.includes('alumno') || l.includes('nombre');
       });
       if (nameIndex === -1) nameIndex = 0;
 
@@ -396,42 +438,31 @@
       const dayEnd = parseInt(document.getElementById('dayEnd').value) || 115;
       const chkOnlyWork = document.getElementById('chkOnlyWork').checked;
 
-      let lessonCols = [];
-      let currentDay = 1;
+      let daysWithWorkSet = new Set();
+      let totalDaysInRangeSet = new Set();
 
       for (let j = 0; j < parsedHeaders.length; j++) {
-        if (j === nameIndex) continue;
-        const h = parsedHeaders[j].toLowerCase().trim();
-
-        if (h.includes('id') || h.includes('carnet') || h.includes('usuario') || 
-            h.includes('correo') || h.includes('email') || h.includes('seccion') || 
-            h.includes('sección') || h.includes('grupo') || h.includes('total') || 
-            h.includes('promedio') || h.includes('%') || h.includes('porcentaje') || 
-            h.includes('final') || h.includes('acumulado')) {
-          continue;
-        }
-
-        const dayMatch = parsedHeaders[j].match(/d[íi]a\s*(\d+)/i) || 
-                         parsedHeaders[j].match(/\bd(\d+)\b/i) || 
-                         parsedHeaders[j].match(/^\s*(\d+)\s*[-_:]/);
-
-        if (dayMatch) {
-          currentDay = parseInt(dayMatch[1], 10);
-        }
-
-        if (currentDay >= dayStart && currentDay <= dayEnd) {
-          let groupHasWork = false;
+        const dayNum = colDayMap[j];
+        if (dayNum >= dayStart && dayNum <= dayEnd) {
+          totalDaysInRangeSet.add(dayNum);
+          
           for (let i = 0; i < parsedRows.length; i++) {
             const val = (parsedRows[i][j] || '').trim().toLowerCase();
             if (val !== '' && val !== '0' && val !== '0.00' && val !== '-' && val !== '0%') {
-              groupHasWork = true;
+              daysWithWorkSet.add(dayNum);
               break;
             }
           }
+        }
+      }
 
-          if (!chkOnlyWork || groupHasWork) {
-            lessonCols.push(j);
-          }
+      let activeDaysSet = chkOnlyWork ? daysWithWorkSet : totalDaysInRangeSet;
+
+      let lessonCols = [];
+      for (let j = 0; j < parsedHeaders.length; j++) {
+        const dayNum = colDayMap[j];
+        if (activeDaysSet.has(dayNum)) {
+          lessonCols.push(j);
         }
       }
 
@@ -474,7 +505,7 @@
         globalHechas += hechas;
         globalPorCalificar += porCalificar;
 
-        const daysCompleted = totalLessonsStudent > 0 ? Math.round((hechas / totalLessonsStudent) * (dayEnd - dayStart + 1)) : 0;
+        const daysCompleted = totalLessonsStudent > 0 ? Math.round((hechas / totalLessonsStudent) * activeDaysSet.size) : 0;
 
         students.push({
           name: name,
@@ -482,7 +513,7 @@
           hechas: hechas,
           porCalificar: porCalificar,
           faltan: faltan,
-          dias: `${daysCompleted} de ${dayEnd - dayStart + 1}`
+          dias: `${daysCompleted} de ${activeDaysSet.size}`
         });
       });
 
@@ -492,8 +523,11 @@
       document.getElementById('fileInfoBar').innerHTML = 
         `<span>Archivo: <strong>${fileName}</strong> · <strong>${students.length}</strong> estudiantes · <strong>1739</strong> lecciones en 156 días</span>`;
 
+      document.getElementById('showingDaysText').innerText = 
+        `Mostrando ${activeDaysSet.size} de 156 días`;
+
       document.getElementById('mStudents').innerText = students.length;
-      document.getElementById('mDays').innerText = (dayEnd - dayStart + 1);
+      document.getElementById('mDays').innerText = activeDaysSet.size;
       document.getElementById('mPending').innerText = globalFaltan;
       document.getElementById('mAvg').innerText = avgPct + '%';
 
