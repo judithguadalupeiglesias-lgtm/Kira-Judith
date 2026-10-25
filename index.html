@@ -517,18 +517,18 @@
         return 'faltan';
       }
 
-      // 2. Valores numéricos evaluados (notas calificadas, incluyendo 0 y 0.00) -> HECHAS
+      // 2. Calificaciones numéricas ya evaluadas (10, 8.5, 0, 0.00) -> HECHAS
       const numVal = parseFloat(raw);
       if (!isNaN(numVal)) {
         return 'hechas';
       }
 
-      // 3. Texto explícito de lección completada / aprobada -> HECHAS
-      if (raw.includes('complet') || raw.includes('aprob') || raw.includes('realiz') || raw.includes('hecho') || raw.includes('exento') || raw.includes('excused')) {
+      // 3. Textos de lección completada o aprobada -> HECHAS
+      if (raw.includes('complet') || raw.includes('aprob') || raw.includes('realiz') || raw.includes('hecho') || raw.includes('excused')) {
         return 'hechas';
       }
 
-      // 4. Cualquier otra entrega registrada en la casilla no evaluada numéricamente -> POR CALIFICAR
+      // 4. Marcas de lección entregada pendiente de calificar (ej. "EX", "P", "E", "*", "revis") -> POR CALIFICAR (Suma 1 unidad)
       return 'porCalificar';
     }
 
@@ -605,7 +605,7 @@
 
           const status = classifyCellValue(row[colIndex]);
           if (status === 'porCalificar') {
-            porCalificar++;
+            porCalificar++; // Suma 1 unidad posicional por cada entrega en revisión
             dayStatusMap[dayNum].porCalificar++;
           } else if (status === 'hechas') {
             hechas++;
