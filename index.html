@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Lecciones pendientes por estudiante - Profe Judith</title>
+  <title>Lecciones pendientes por estudiante - Licda. Judith</title>
   <style>
     :root {
       --bg: #f3f4f6;
@@ -307,7 +307,7 @@
     </div>
 
     <footer>
-      @profejudith
+      @licdajudith
     </footer>
   </div>
 
@@ -386,7 +386,6 @@
       const dayStart = parseInt(document.getElementById('dayStart').value) || 1;
       const dayEnd = parseInt(document.getElementById('dayEnd').value) || 115;
 
-      // Extract total expected points/lessons per activity column
       let colMaxPoints = [];
       for (let j = 0; j < parsedHeaders.length; j++) {
         if (j === nameIndex) {
@@ -458,7 +457,6 @@
         });
       });
 
-      const totalLessonsCount = validCols.length * parsedRows.length;
       document.getElementById('fileInfoBar').innerHTML = 
         `<span><strong>Archivo:</strong> ${fileName} · <strong>${students.length}</strong> estudiantes · <strong>1739</strong> lecciones en 156 días</span>`;
 
