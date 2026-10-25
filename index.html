@@ -279,7 +279,7 @@
         </div>
         <div class="metric-card">
           <div class="num" id="mPending">0</div>
-          <div class="label" id="mPendingLabel">lecciones faltantes en total</div>
+          <div class="label">lecciones faltantes en total</div>
         </div>
         <div class="metric-card">
           <div class="num" id="mAvg">0%</div>
@@ -386,28 +386,40 @@
       const dayStart = parseInt(document.getElementById('dayStart').value) || 1;
       const dayEnd = parseInt(document.getElementById('dayEnd').value) || 115;
 
-      // Filter columns to keep only lesson columns (ignoring ID/carnet/user/group columns)
+      // Detect and process ONLY valid daily lesson columns (ignoring ID, Carnet, and Summary/Total columns at the end)
       let lessonCols = [];
       for (let j = 0; j < parsedHeaders.length; j++) {
         if (j === nameIndex) continue;
         const h = parsedHeaders[j].toLowerCase().trim();
-        
-        if (h.includes('id') || h.includes('usuario') || h.includes('carnet') || 
-            h.includes('seccion') || h.includes('sección') || h.includes('grupo') || 
-            h.includes('correo') || h.includes('email') || h.includes('codigo') || h.includes('código')) {
+
+        // Ignore metadata and summary columns
+        if (h.includes('id') || h.includes('carnet') || h.includes('usuario') || 
+            h.includes('correo') || h.includes('email') || h.includes('total') || 
+            h.includes('promedio') || h.includes('%') || h.includes('porcentaje') || 
+            h.includes('final') || h.includes('acumulado')) {
           continue;
         }
 
+        // Determine max points for this lesson column
         let maxVal = 0;
         for (let i = 0; i < parsedRows.length; i++) {
           const v = parseFloat(parsedRows[i][j]) || 0;
           if (v > maxVal) maxVal = v;
         }
 
-        // If a column max value is > 100, it's an ID or internal code column, so skip it
-        if (maxVal > 100) continue;
+        // If max value exceeds standard lesson scores (> 500), skip summary columns
+        if (maxVal > 500) continue;
 
-        lessonCols.push({ index: j, maxPoints: maxVal > 0 ? maxVal : 10 });
+        // Check day number filter
+        const dayMatch = parsedHeaders[j].match(/\d+/);
+        const dayNum = dayMatch ? parseInt(dayMatch[0]) : (j - nameIndex);
+
+        if (dayNum >= dayStart && dayNum <= dayEnd) {
+          lessonCols.push({
+            index: j,
+            maxPoints: Math.round(maxVal > 0 ? maxVal : 10)
+          });
+        }
       }
 
       let students = [];
@@ -453,16 +465,16 @@
           hechas: Math.round(hechas),
           porCalificar: Math.round(porCalificar),
           faltan: Math.round(faltan),
-          dias: `${Math.round((hechas/(expectedTotal||1))*115)} de 115`
+          dias: `${Math.round((hechas / (expectedTotal || 1)) * 115)} de 115`
         });
       });
 
       document.getElementById('fileInfoBar').innerHTML = 
-        `<span><strong>Archivo:</strong> ${fileName} · <strong>${students.length}</strong> estudiantes · <strong>1739</strong> lecciones en 156 días</span>`;
+        `<span>Archivo: <strong>${fileName}</strong> · <strong>${students.length}</strong> estudiantes · <strong>1739</strong> lecciones en 156 días</span>`;
 
       document.getElementById('mStudents').innerText = students.length;
       document.getElementById('mDays').innerText = (dayEnd - dayStart + 1);
-      document.getElementById('mPending').innerText = globalFaltan;
+      document.getElementById('mPending').innerText = Math.round(globalFaltan);
       
       const avgPct = Math.round((globalHechas / (globalTotalExpected || 1)) * 100);
       document.getElementById('mAvg').innerText = avgPct + '%';
