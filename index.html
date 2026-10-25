@@ -386,28 +386,28 @@
       const dayStart = parseInt(document.getElementById('dayStart').value) || 1;
       const dayEnd = parseInt(document.getElementById('dayEnd').value) || 115;
 
-      let colMaxPoints = [];
+      // Filter columns to keep only lesson columns (ignoring ID/carnet/user/group columns)
+      let lessonCols = [];
       for (let j = 0; j < parsedHeaders.length; j++) {
-        if (j === nameIndex) {
-          colMaxPoints.push(0);
+        if (j === nameIndex) continue;
+        const h = parsedHeaders[j].toLowerCase().trim();
+        
+        if (h.includes('id') || h.includes('usuario') || h.includes('carnet') || 
+            h.includes('seccion') || h.includes('sección') || h.includes('grupo') || 
+            h.includes('correo') || h.includes('email') || h.includes('codigo') || h.includes('código')) {
           continue;
         }
+
         let maxVal = 0;
         for (let i = 0; i < parsedRows.length; i++) {
           const v = parseFloat(parsedRows[i][j]) || 0;
           if (v > maxVal) maxVal = v;
         }
-        colMaxPoints.push(maxVal > 0 ? maxVal : 10);
-      }
 
-      let validCols = [];
-      for (let j = 0; j < parsedHeaders.length; j++) {
-        if (j === nameIndex) continue;
-        const dayMatch = parsedHeaders[j].match(/\d+/);
-        const dayNum = dayMatch ? parseInt(dayMatch[0]) : (j - nameIndex);
-        if (dayNum >= dayStart && dayNum <= dayEnd) {
-          validCols.push(j);
-        }
+        // If a column max value is > 100, it's an ID or internal code column, so skip it
+        if (maxVal > 100) continue;
+
+        lessonCols.push({ index: j, maxPoints: maxVal > 0 ? maxVal : 10 });
       }
 
       let students = [];
@@ -424,16 +424,16 @@
         let faltan = 0;
         let expectedTotal = 0;
 
-        validCols.forEach(j => {
-          const maxP = colMaxPoints[j];
-          const rawVal = (row[j] || '').trim();
+        lessonCols.forEach(col => {
+          const maxP = col.maxPoints;
+          const rawVal = (row[col.index] || '').trim();
           const earned = parseFloat(rawVal) || 0;
 
           expectedTotal += maxP;
 
           if (rawVal === '' || rawVal === '-' || earned === 0) {
             faltan += maxP;
-          } else if (rawVal.toLowerCase().includes('revisión')) {
+          } else if (rawVal.toLowerCase().includes('revisión') || rawVal.toLowerCase().includes('calificar')) {
             porCalificar += maxP;
           } else {
             hechas += earned;
