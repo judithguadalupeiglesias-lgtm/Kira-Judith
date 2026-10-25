@@ -328,7 +328,7 @@
     let parsedHeaders = [];
     let fileName = '';
     let colDayMap = [];
-    let maxDetectedDay = 156;
+    let totalDetectedDays = 156;
 
     function changeFontSize(delta) {
       currentFontSize += delta;
@@ -366,11 +366,56 @@
       reader.readAsText(file);
     }
 
+    function parseCSVLine(text, delimiter) {
+      const result = [];
+      let cell = '';
+      let inQuotes = false;
+      for (let i = 0; i < text.length; i++) {
+        const c = text[i];
+        if (c === '"') {
+          inQuotes = !inQuotes;
+        } else if (c === delimiter && !inQuotes) {
+          result.push(cell.replace(/^"|"$/g, '').trim());
+          cell = '';
+        } else {
+          cell += c;
+        }
+      }
+      result.push(cell.replace(/^"|"$/g, '').trim());
+      return result;
+    }
+
+    function extractDayNumber(headerText) {
+      if (!headerText) return null;
+      const clean = headerText.toLowerCase().trim();
+
+      const matchDia = clean.match(/d[íi]a\s*(\d+)/i) || 
+                       clean.match(/\bd\s*(\d+)\b/i) ||
+                       clean.match(/clase\s*(\d+)/i);
+
+      if (matchDia) return parseInt(matchDia[1], 10);
+      return null;
+    }
+
+    function isMetadataHeader(headerText) {
+      if (!headerText) return true;
+      const h = headerText.toLowerCase().trim();
+      return h.includes('id') || h.includes('carnet') || h.includes('usuario') || 
+             h.includes('correo') || h.includes('email') || h.includes('seccion') || 
+             h.includes('sección') || h.includes('grupo') || h.includes('total') || 
+             h.includes('promedio') || h.includes('%') || h.includes('porcentaje') || 
+             h.includes('final') || h.includes('acumulado') || h.includes('estudiante') ||
+             h.includes('alumno') || h.includes('nombre');
+    }
+
     function processKiraCSV(text) {
       const lines = text.split(/\r\n|\n/).filter(line => line.trim() !== '');
       if (lines.length < 2) return;
 
-      const delimiter = lines[0].includes(';') ? ';' : ',';
+      const commaCount = (lines[0].match(/,/g) || []).length;
+      const semiCount = (lines[0].match(/;/g) || []).length;
+      const delimiter = semiCount > commaCount ? ';' : ',';
+
       parsedHeaders = parseCSVLine(lines[0], delimiter);
 
       parsedRows = [];
@@ -395,34 +440,55 @@
           continue;
         }
 
-        const h = parsedHeaders[j].toLowerCase().trim();
-        if (h.includes('id') || h.includes('carnet') || h.includes('usuario') || 
-            h.includes('correo') || h.includes('email') || h.includes('seccion') || 
-            h.includes('sección') || h.includes('grupo') || h.includes('total') || 
-            h.includes('promedio') || h.includes('%') || h.includes('porcentaje') || 
-            h.includes('final') || h.includes('acumulado')) {
+        if (isMetadataHeader(parsedHeaders[j])) {
           colDayMap[j] = -1;
           continue;
         }
 
-        const matchDia = parsedHeaders[j].match(/d[íi]a\s*(\d+)/i) || 
-                         parsedHeaders[j].match(/\bd(\d+)\b/i);
-
-        if (matchDia) {
-          currentDay = parseInt(matchDia[1], 10);
+        const detectedDay = extractDayNumber(parsedHeaders[j]);
+        if (detectedDay !== null && detectedDay > 0) {
+          currentDay = detectedDay;
         }
 
         colDayMap[j] = currentDay;
         if (currentDay > maxDayFound) maxDayFound = currentDay;
       }
 
-      maxDetectedDay = maxDayFound > 1 ? maxDayFound : 156;
+      totalDetectedDays = maxDayFound > 1 ? maxDayFound : 156;
 
       document.getElementById('dropZone').style.display = 'none';
       document.getElementById('dashboard').style.display = 'block';
       document.getElementById('btnReload').style.display = 'inline-block';
 
       renderDashboard();
+    }
+
+    function classifyCellValue(val) {
+      if (!val) return 'faltan';
+      const raw = val.trim().toLowerCase().replace(',', '.');
+
+      if (raw === '' || raw === '0' || raw === '0.00' || raw === '0.0' || raw === '-' || raw === '--' || raw === '0%' || raw === '0 %') {
+        return 'faltan';
+      }
+
+      if (raw.includes('revis') || raw.includes('calif') || raw === 'p' || raw.includes('pend') || raw.includes('necesita')) {
+        return 'porCalificar';
+      }
+
+      if (raw.includes('sin entreg') || raw.includes('no entreg') || raw.includes('sin real') || raw.includes('incompleto') || raw.includes('falta') || raw.includes('n/a')) {
+        return 'faltan';
+      }
+
+      const numVal = parseFloat(raw);
+      if (!isNaN(numVal) && numVal > 0) {
+        return 'hechas';
+      }
+
+      if (raw.includes('complet') || raw.includes('entreg') || raw.includes('realiz') || raw.includes('hecho') || raw.includes('aprob')) {
+        return 'hechas';
+      }
+
+      return 'faltan';
     }
 
     function renderDashboard() {
@@ -447,8 +513,8 @@
           totalDaysInRangeSet.add(dayNum);
           
           for (let i = 0; i < parsedRows.length; i++) {
-            const val = (parsedRows[i][j] || '').trim().toLowerCase();
-            if (val !== '' && val !== '0' && val !== '0.00' && val !== '-' && val !== '0%') {
+            const status = classifyCellValue(parsedRows[i][j]);
+            if (status === 'hechas' || status === 'porCalificar') {
               daysWithWorkSet.add(dayNum);
               break;
             }
@@ -480,21 +546,13 @@
         let faltan = 0;
 
         lessonCols.forEach(colIndex => {
-          const rawVal = (row[colIndex] || '').trim().toLowerCase().replace(',', '.');
-
-          if (rawVal.includes('revis') || rawVal.includes('calif') || rawVal === 'p' || rawVal.includes('pend')) {
+          const status = classifyCellValue(row[colIndex]);
+          if (status === 'porCalificar') {
             porCalificar++;
-          } else if (rawVal === '' || rawVal === '0' || rawVal === '0.00' || rawVal === '-' || rawVal === '0%') {
-            faltan++;
+          } else if (status === 'hechas') {
+            hechas++;
           } else {
-            const numVal = parseFloat(rawVal);
-            if (!isNaN(numVal) && numVal > 0) {
-              hechas++;
-            } else if (isNaN(numVal) && rawVal !== '') {
-              hechas++;
-            } else {
-              faltan++;
-            }
+            faltan++;
           }
         });
 
@@ -524,7 +582,7 @@
         `<span>Archivo: <strong>${fileName}</strong> · <strong>${students.length}</strong> estudiantes · <strong>1739</strong> lecciones en 156 días</span>`;
 
       document.getElementById('showingDaysText').innerText = 
-        `Mostrando ${activeDaysSet.size} de 156 días`;
+        `Mostrando ${activeDaysSet.size} de ${totalDetectedDays} días`;
 
       document.getElementById('mStudents').innerText = students.length;
       document.getElementById('mDays').innerText = activeDaysSet.size;
@@ -554,25 +612,6 @@
         `;
         tbody.appendChild(tr);
       });
-    }
-
-    function parseCSVLine(text, delimiter) {
-      const result = [];
-      let cell = '';
-      let inQuotes = false;
-      for (let i = 0; i < text.length; i++) {
-        const c = text[i];
-        if (c === '"') {
-          inQuotes = !inQuotes;
-        } else if (c === delimiter && !inQuotes) {
-          result.push(cell.replace(/^"|"$/g, '').trim());
-          cell = '';
-        } else {
-          cell += c;
-        }
-      }
-      result.push(cell.replace(/^"|"$/g, '').trim());
-      return result;
     }
   </script>
 
