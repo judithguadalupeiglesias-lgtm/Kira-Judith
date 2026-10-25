@@ -509,28 +509,28 @@
       if (val === null || val === undefined) return 'faltan';
       const raw = val.toString().trim().toLowerCase().replace(',', '.');
 
+      // 1. Casillas vacías o sin entrega explícita -> FALTAN
       if (raw === '' || raw === '-' || raw === '--' || raw === 'n/a' || 
           raw.includes('sin entreg') || raw.includes('no entreg') || 
           raw.includes('unsubmitted') || raw.includes('missing')) {
         return 'faltan';
       }
 
-      if (raw === 'p' || raw === 'pend' || raw.includes('por calificar') || 
-          raw.includes('pendiente') || raw.includes('necesita revis') || 
-          raw.includes('ungraded') || raw.includes('submitted')) {
+      // 2. Pendientes de calificación (ej. "EX", "P", "revis", "calif", "pend", "necesita") -> POR CALIFICAR
+      if (raw === 'p' || raw === 'ex' || raw === 'pend' || raw.includes('por calificar') || 
+          raw.includes('pendiente') || raw.includes('revis') || raw.includes('calif') ||
+          raw.includes('necesita') || raw.includes('ungraded') || raw.includes('submitted')) {
         return 'porCalificar';
       }
 
-      if (raw === 'ex' || raw.includes('exento') || raw.includes('excused')) {
+      // 3. Cualquier valor numérico evaluado (10, 8.5, 0, 0.00, etc.) -> HECHAS
+      const numVal = parseFloat(raw);
+      if (!isNaN(numVal)) {
         return 'hechas';
       }
 
-      const numVal = parseFloat(raw);
-      if (!isNaN(numVal)) {
-        return numVal > 0 ? 'hechas' : 'faltan';
-      }
-
-      if (raw.includes('complet') || raw.includes('entreg') || raw.includes('realiz') || raw.includes('hecho') || raw.includes('aprob')) {
+      // 4. Palabras de lección completada o aprobada -> HECHAS
+      if (raw.includes('complet') || raw.includes('entreg') || raw.includes('realiz') || raw.includes('hecho') || raw.includes('aprob') || raw.includes('exento')) {
         return 'hechas';
       }
 
@@ -668,7 +668,7 @@
       if (!student) return;
 
       document.getElementById('modalTitle').innerText = `Detalles: ${student.name}`;
-      let html = `<p><strong>Avance:</strong> ${student.pct}% | <strong>Lecciones hechas:</strong> ${student.hechas} | <strong>Faltan:</strong> ${student.faltan}</p>`;
+      let html = `<p><strong>Avance:</strong> ${student.pct}% | <strong>Lecciones hechas:</strong> ${student.hechas} | <strong>Por calificar:</strong> ${student.porCalificar} | <strong>Faltan:</strong> ${student.faltan}</p>`;
       
       if (student.missingDetails.length === 0) {
         html += `<p style="color:green; font-weight:bold;">¡Felicidades! No tiene lecciones pendientes en los días revisados.</p>`;
